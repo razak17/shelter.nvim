@@ -140,8 +140,8 @@ require("shelter").setup({
     none = {},                -- No options needed
   },
 
-  -- File patterns to match as env files
-  env_file_patterns = { ".env", ".env.*", ".envrc" },
+  -- Filetypes to mask (default: {"dotenv", "edf"}, configurable)
+  env_filetypes = { "dotenv", "edf" },
 
   -- Key patterns to mode mapping (glob patterns)
   patterns = {

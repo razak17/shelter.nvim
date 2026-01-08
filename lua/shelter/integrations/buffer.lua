@@ -9,7 +9,6 @@ local masking = require("shelter.masking")
 
 -- Fast locals for hot path (5-15% speedup)
 local api = vim.api
-local fn = vim.fn
 local nvim_buf_is_valid = api.nvim_buf_is_valid
 local nvim_buf_get_lines = api.nvim_buf_get_lines
 local nvim_buf_get_name = api.nvim_buf_get_name
@@ -52,31 +51,30 @@ local function get_namespace()
 	return ns_id
 end
 
----Convert glob pattern to Lua pattern (cached version exists in pattern_cache)
----@param glob string
----@return string
-local function glob_to_pattern(glob)
-	local pattern = glob
-	pattern = pattern:gsub("([%.%+%-%?%^%$%(%)%[%]%%])", "%%%1")
-	pattern = pattern:gsub("%*", ".*")
-	return "^" .. pattern .. "$"
-end
-
----Check if a file matches env file patterns
----@param filename string
+---Check if a filetype is an env filetype
+---@param filetype string
 ---@return boolean
-local function is_env_file(filename)
-	local cfg = config.get()
-	local basename = fn.fnamemodify(filename, ":t")
+local function is_env_filetype(filetype)
+	if not filetype or filetype == "" then
+		return false
+	end
 
-	for _, pattern in ipairs(cfg.env_file_patterns or {}) do
-		local lua_pattern = glob_to_pattern(pattern)
-		if basename:match(lua_pattern) then
+	local cfg = config.get()
+	for _, ft in ipairs(cfg.env_filetypes or {}) do
+		if filetype == ft then
 			return true
 		end
 	end
 
 	return false
+end
+
+---Check if a buffer is an env file (by filetype)
+---@param bufnr number
+---@return boolean
+local function is_env_buffer(bufnr)
+	local filetype = vim.bo[bufnr].filetype
+	return is_env_filetype(filetype)
 end
 
 ---Clear all extmarks in a buffer
@@ -272,11 +270,13 @@ function M.shelter_buffer(bufnr, sync)
 		return
 	end
 
-	-- Get buffer name
-	local bufname = nvim_buf_get_name(bufnr)
-	if bufname == "" or not is_env_file(bufname) then
+	-- Check if buffer filetype is an env filetype
+	if not is_env_buffer(bufnr) then
 		return
 	end
+
+	-- Get buffer name for source tracking
+	local bufname = nvim_buf_get_name(bufnr)
 
 	-- Clear existing marks
 	clear_extmarks(bufnr)
@@ -298,17 +298,19 @@ end
 
 ---Shelter a preview buffer (for picker integrations)
 ---Unlike shelter_buffer, this doesn't check "files" feature state
----and accepts filename directly instead of using buffer name
+---and accepts filetype directly instead of checking buffer filetype
 ---@param bufnr number Buffer number
----@param filename string Filename for env file detection
-function M.shelter_preview_buffer(bufnr, filename)
+---@param filename string Filename for source tracking
+---@param filetype? string Optional filetype override (for preview buffers)
+function M.shelter_preview_buffer(bufnr, filename, filetype)
 	-- Check if buffer is valid
 	if not nvim_buf_is_valid(bufnr) then
 		return
 	end
 
-	-- Use filename directly for env file check (preview buffers may not have buffer names set)
-	if not filename or not is_env_file(filename) then
+	-- Use provided filetype or detect from buffer
+	local ft = filetype or vim.bo[bufnr].filetype
+	if not is_env_filetype(ft) then
 		return
 	end
 
@@ -438,19 +440,11 @@ end
 -- Autocommand group
 local augroup = nil
 
----Get file patterns for autocmds from config
+---Get filetypes for autocmds from config
 ---@return string[]
-local function get_watch_patterns()
+local function get_env_filetypes()
 	local cfg = config.get()
-	local patterns = {}
-
-	for _, pattern in ipairs(cfg.env_file_patterns or {}) do
-		-- Add pattern as-is and with **/ prefix for nested files
-		patterns[#patterns + 1] = pattern
-		patterns[#patterns + 1] = "**/" .. pattern
-	end
-
-	return patterns
+	return cfg.env_filetypes or { "sh", "dotenv", "conf" }
 end
 
 ---Setup buffer options for sheltering
@@ -506,10 +500,9 @@ setup_paste_override = function()
 	vim.paste = function(lines, phase)
 		local bufnr = nvim_get_current_buf()
 		local bufname = nvim_buf_get_name(bufnr)
-		local filename = fn.fnamemodify(bufname, ":t")
 
-		-- Only intercept for env files when files feature is enabled
-		if not is_env_file(filename) or not state.is_enabled("files") then
+		-- Only intercept for env filetypes when files feature is enabled
+		if not is_env_buffer(bufnr) or not state.is_enabled("files") then
 			return original_paste(lines, phase)
 		end
 
@@ -605,67 +598,12 @@ function M.setup()
 	-- Setup paste override for protection
 	setup_paste_override()
 
-	local watch_patterns = get_watch_patterns()
+	local env_filetypes = get_env_filetypes()
 
-	-- BufReadCmd intercepts file reading BEFORE content is displayed
-	-- This prevents the flash of unmasked values
-	nvim_create_autocmd("BufReadCmd", {
-		pattern = watch_patterns,
-		group = augroup,
-		callback = function(ev)
-			local bufnr = ev.buf
-			local filename = ev.file
-
-			-- Guard: check if buffer already has content (prevent duplicate reads)
-			local existing_lines = nvim_buf_get_lines(bufnr, 0, -1, false)
-			if #existing_lines > 1 or (#existing_lines == 1 and existing_lines[1] ~= "") then
-				-- Buffer already has content, just apply masks
-				if state.is_enabled("files") then
-					clear_extmarks(bufnr)
-					local winid = nvim_get_current_win()
-					setup_buffer_options(bufnr, winid)
-					M.shelter_buffer(bufnr, true) -- sync=true to prevent flash
-				end
-				return true
-			end
-
-			-- Actually read the file
-			local ok, err = pcall(function()
-				vim.cmd("keepalt read " .. fn.fnameescape(filename))
-				-- Remove the empty first line created by :read
-				api.nvim_buf_set_lines(bufnr, 0, 1, false, {})
-
-				-- Set filetype
-				local ft = vim.filetype.match({ filename = filename })
-
-				if ft then
-					vim.bo[bufnr].filetype = ft
-				else
-					vim.bo[bufnr].filetype = "sh"
-				end
-
-				vim.bo[bufnr].modified = false
-			end)
-
-			if not ok then
-				vim.notify("shelter.nvim: Failed to read file: " .. tostring(err), vim.log.levels.ERROR)
-				return true
-			end
-
-			-- Apply masking immediately before displaying (sync=true prevents flash)
-			if state.is_enabled("files") then
-				local winid = nvim_get_current_win()
-				setup_buffer_options(bufnr, winid)
-				M.shelter_buffer(bufnr, true) -- sync=true to prevent flash
-			end
-
-			return true
-		end,
-	})
-
-	-- Handle buffer enter for already-loaded buffers
-	nvim_create_autocmd("BufEnter", {
-		pattern = watch_patterns,
+	-- FileType autocmd - triggers when filetype is set (after file is loaded)
+	-- This is the primary entry point for masking env files
+	nvim_create_autocmd("FileType", {
+		pattern = env_filetypes,
 		group = augroup,
 		callback = function(ev)
 			if state.is_enabled("files") then
@@ -676,10 +614,32 @@ function M.setup()
 		end,
 	})
 
-	nvim_create_autocmd("BufLeave", {
-		pattern = watch_patterns,
+	-- BufEnter - re-apply masks when entering a buffer (handles window switches)
+	nvim_create_autocmd("BufEnter", {
 		group = augroup,
 		callback = function(ev)
+			-- Only process if this is an env filetype
+			if not is_env_buffer(ev.buf) then
+				return
+			end
+
+			if state.is_enabled("files") then
+				local winid = nvim_get_current_win()
+				setup_buffer_options(ev.buf, winid)
+				M.shelter_buffer(ev.buf, true) -- sync=true to prevent flash
+			end
+		end,
+	})
+
+	-- BufLeave - re-shelter when leaving buffer
+	nvim_create_autocmd("BufLeave", {
+		group = augroup,
+		callback = function(ev)
+			-- Only process if this is an env filetype
+			if not is_env_buffer(ev.buf) then
+				return
+			end
+
 			local files_config = config.get_files_config()
 			if files_config.shelter_on_leave then
 				-- Reset revealed lines when leaving buffer
@@ -690,7 +650,7 @@ function M.setup()
 
 				-- Re-apply shelter to the buffer we're leaving
 				if state.is_enabled("files") and nvim_buf_is_valid(ev.buf) then
-					M.shelter_buffer(ev.buf)
+					M.shelter_buffer(ev.buf, true)
 				end
 			end
 		end,
@@ -699,9 +659,13 @@ function M.setup()
 	-- TextChanged (non-insert) - applies to undo/redo/external changes
 	-- Apply masks synchronously to prevent flash during undo/redo
 	nvim_create_autocmd("TextChanged", {
-		pattern = watch_patterns,
 		group = augroup,
 		callback = function(ev)
+			-- Only process if this is an env filetype
+			if not is_env_buffer(ev.buf) then
+				return
+			end
+
 			-- Skip if paste operation is handling masking synchronously
 			if paste_in_progress then
 				return
@@ -712,8 +676,8 @@ function M.setup()
 			end
 
 			-- Clear cache on text change
-			local engine = require("shelter.masking.engine")
-			engine.clear_caches()
+			local masking_engine = require("shelter.masking.engine")
+			masking_engine.clear_caches()
 
 			-- Apply masks synchronously for undo/redo operations
 			M.shelter_buffer(ev.buf, true) -- sync=true
@@ -723,9 +687,13 @@ function M.setup()
 	-- TextChangedI (insert mode) - apply synchronously to prevent any flash
 	-- Env files are typically small, so synchronous masking is performant
 	nvim_create_autocmd("TextChangedI", {
-		pattern = watch_patterns,
 		group = augroup,
 		callback = function(ev)
+			-- Only process if this is an env filetype
+			if not is_env_buffer(ev.buf) then
+				return
+			end
+
 			-- Skip if paste operation is handling masking synchronously
 			if paste_in_progress then
 				return
@@ -736,8 +704,8 @@ function M.setup()
 			end
 
 			-- Clear cache on text change
-			local engine = require("shelter.masking.engine")
-			engine.clear_caches()
+			local masking_engine = require("shelter.masking.engine")
+			masking_engine.clear_caches()
 
 			-- Apply masks synchronously to prevent any flash of keystrokes
 			M.shelter_buffer(ev.buf, true) -- sync=true
@@ -746,16 +714,20 @@ function M.setup()
 
 	-- InsertLeave - ensure masks are applied when exiting insert mode
 	nvim_create_autocmd("InsertLeave", {
-		pattern = watch_patterns,
 		group = augroup,
 		callback = function(ev)
+			-- Only process if this is an env filetype
+			if not is_env_buffer(ev.buf) then
+				return
+			end
+
 			if not state.is_enabled("files") then
 				return
 			end
 
 			-- Clear cache and apply masks synchronously
-			local engine = require("shelter.masking.engine")
-			engine.clear_caches()
+			local masking_engine = require("shelter.masking.engine")
+			masking_engine.clear_caches()
 			M.shelter_buffer(ev.buf, true) -- sync=true
 		end,
 	})

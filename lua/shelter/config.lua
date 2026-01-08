@@ -29,7 +29,7 @@ local M = {}
 ---@field skip_comments? boolean Whether to skip masking in comments
 ---@field default_mode? "full"|"partial"|"none"|string Default masking mode
 ---@field modes? table<string, ShelterModeConfig> Mode configurations and custom mode definitions
----@field env_file_patterns? string[] Patterns to match env files
+---@field env_filetypes? string[] Filetypes to mask (default: {"dotenv", "edf"})
 ---@field patterns? table<string, string> Key patterns to mode mapping
 ---@field sources? table<string, string> Source file patterns to mode mapping
 ---@field modules? ShelterModulesConfig Module toggles
@@ -55,7 +55,7 @@ local DEFAULT_CONFIG = {
 		},
 		none = {},
 	},
-	env_file_patterns = { ".env", ".env.*", ".envrc" },
+	env_filetypes = { "dotenv", "edf" },
 	patterns = {},
 	sources = {},
 	modules = {
@@ -99,7 +99,7 @@ function M.validate()
 		highlight_group = { config.highlight_group, "string" },
 		skip_comments = { config.skip_comments, "boolean" },
 		default_mode = { config.default_mode, "string" },
-		env_file_patterns = { config.env_file_patterns, "table" },
+		env_filetypes = { config.env_filetypes, "table" },
 		patterns = { config.patterns, "table" },
 		sources = { config.sources, "table" },
 		modules = { config.modules, "table" },
