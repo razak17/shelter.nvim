@@ -147,7 +147,7 @@ M.library_exists = library_exists
 M.get_platform = get_platform
 
 -- If run directly
-if arg and arg[0]:match("build%.lua$") then
+if arg and arg[0] and arg[0]:match("build%.lua$") then
   M.ensure_binary()
 end
 
