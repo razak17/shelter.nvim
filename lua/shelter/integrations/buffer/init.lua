@@ -95,9 +95,12 @@ function M.shelter_buffer(bufnr, sync, force)
 	if not force then
 		local content_len = #content
 		-- Simple hash: length + first 64 chars (matches engine.lua hash strategy for small files)
-		local simple_hash = content_len < 512
-			and (content_len .. ":" .. content:sub(1, 64))
-			or (content_len .. ":" .. content:sub(1, 32) .. content:sub(-32))
+		local simple_hash
+		if content_len < 512 then
+			simple_hash = content_len .. ":" .. content:sub(1, 64)
+		else
+			simple_hash = content_len .. ":" .. content:sub(1, 32) .. content:sub(-32)
+		end
 
 		if buffer_content_hashes[bufnr] == simple_hash then
 			return -- Content unchanged, skip re-masking
@@ -169,6 +172,9 @@ function M.unshelter_buffer(bufnr)
 
 	extmarks.clear(bufnr)
 	completion.restore(bufnr)
+
+	-- Clear content hash so re-sheltering will apply masks
+	buffer_content_hashes[bufnr] = nil
 end
 
 ---Refresh a buffer (re-apply masks)
