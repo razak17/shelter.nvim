@@ -43,51 +43,38 @@
 ## Performance
 
 <!-- BENCHMARK_START -->
-
-### Benchmarks
+### Performance Benchmarks
 
 Measured on GitHub Actions (Ubuntu, averaged over 100 iterations):
 
-| Scenario    | Lines | shelter.nvim | cloak.nvim | Result          |
-| ----------- | ----- | ------------ | ---------- | --------------- |
-| **Parsing** | 500   | 0.49 ms      | 1.99 ms    | **4.1x faster** |
-| **Preview** | 500   | 0.43 ms      | 1.92 ms    | **4.5x faster** |
-| **Edit**    | 500   | 1.64 ms      | 1.73 ms    | **1.1x faster** |
-
-<details>
-<summary>Full benchmark results</summary>
-
 #### Parsing Performance
 
-| Lines | shelter.nvim | cloak.nvim | Difference  |
-| ----- | ------------ | ---------- | ----------- |
-| 10    | 0.02 ms      | 0.04 ms    | 1.9x faster |
-| 50    | 0.05 ms      | 0.18 ms    | 3.3x faster |
-| 100   | 0.10 ms      | 0.36 ms    | 3.8x faster |
-| 500   | 0.49 ms      | 1.99 ms    | 4.1x faster |
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.03 ms      | 0.05 ms      | 1.9x faster |
+| 50    | 0.05 ms      | 0.18 ms      | 3.7x faster |
+| 100    | 0.08 ms      | 0.36 ms      | 4.6x faster |
+| 500    | 0.37 ms      | 1.78 ms      | 4.8x faster |
 
 #### Preview Performance (Telescope)
 
-| Lines | shelter.nvim | cloak.nvim | Difference  |
-| ----- | ------------ | ---------- | ----------- |
-| 10    | 0.01 ms      | 0.05 ms    | 3.3x faster |
-| 50    | 0.05 ms      | 0.18 ms    | 4.0x faster |
-| 100   | 0.09 ms      | 0.37 ms    | 4.1x faster |
-| 500   | 0.43 ms      | 1.92 ms    | 4.5x faster |
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.03 ms      | 0.05 ms      | 1.7x faster |
+| 50    | 0.05 ms      | 0.18 ms      | 3.5x faster |
+| 100    | 0.06 ms      | 0.37 ms      | 5.8x faster |
+| 500    | 0.41 ms      | 1.92 ms      | 4.7x faster |
 
 #### Edit Re-masking Performance
 
-| Lines | shelter.nvim | cloak.nvim | Difference  |
-| ----- | ------------ | ---------- | ----------- |
-| 10    | 0.04 ms      | 0.05 ms    | 1.4x faster |
-| 50    | 0.17 ms      | 0.19 ms    | 1.2x faster |
-| 100   | 0.33 ms      | 0.40 ms    | 1.2x faster |
-| 500   | 1.64 ms      | 1.73 ms    | 1.1x faster |
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.04 ms      | 0.05 ms      | 1.4x faster |
+| 50    | 0.15 ms      | 0.19 ms      | 1.2x faster |
+| 100    | 0.32 ms      | 0.38 ms      | 1.2x faster |
+| 500    | 1.81 ms      | 1.70 ms      | 1.1x slower |
 
-</details>
-
-_Last updated: 2026-01-10_
-
+*Last updated: 2026-01-10*
 <!-- BENCHMARK_END -->
 
 ### Why So Fast?
