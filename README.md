@@ -78,12 +78,32 @@ Choose cloak.nvim if you need to mask values in **any filetype** (not just env f
 
 Measured on GitHub Actions (Ubuntu, averaged over 10 iterations):
 
+#### Parsing Performance
+
 | Lines | shelter.nvim | cloak.nvim | Difference |
 |-------|--------------|------------|------------|
-| 10    | 0.10 ms      | 0.08 ms      | 1.3x slower |
-| 50    | 0.11 ms      | 0.21 ms      | 2.0x faster |
-| 100    | 0.19 ms      | 0.41 ms      | 2.1x faster |
-| 500    | 0.82 ms      | 1.85 ms      | 2.3x faster |
+| 10    | 0.09 ms      | 0.08 ms      | 1.2x slower |
+| 50    | 0.13 ms      | 0.17 ms      | 1.3x faster |
+| 100    | 0.21 ms      | 0.33 ms      | 1.6x faster |
+| 500    | 0.82 ms      | 1.75 ms      | 2.1x faster |
+
+#### Preview Performance (Telescope)
+
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.03 ms      | 0.05 ms      | 1.5x faster |
+| 50    | 0.13 ms      | 0.17 ms      | 1.4x faster |
+| 100    | 0.18 ms      | 0.33 ms      | 1.8x faster |
+| 500    | 0.85 ms      | 1.71 ms      | 2.0x faster |
+
+#### Edit Re-masking Performance
+
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.07 ms      | 0.04 ms      | 1.6x slower |
+| 50    | 0.28 ms      | 0.17 ms      | 1.6x slower |
+| 100    | 0.51 ms      | 0.34 ms      | 1.5x slower |
+| 500    | 2.32 ms      | 1.66 ms      | 1.4x slower |
 
 *Last updated: 2026-01-10*
 <!-- BENCHMARK_END -->
