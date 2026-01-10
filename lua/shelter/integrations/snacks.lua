@@ -24,20 +24,23 @@ function M.setup()
 	preview.file = function(ctx)
 		local original = state.get_original("snacks_preview")
 
-		-- Extract filename from context
-		local filename = ctx.item and ctx.item.file and vim.fn.fnamemodify(ctx.item.file, ":t")
-
 		-- Call original preview function first
 		if original then
 			original(ctx)
 		end
 
-		-- Apply masking if enabled and is env file
-		if state.is_enabled("snacks_previewer") and filename and env_file.is_env_file(filename) then
+		-- Apply masking if enabled - detect filetype from filename
+		if state.is_enabled("snacks_previewer") then
 			vim.schedule(function()
 				if ctx.buf and vim.api.nvim_buf_is_valid(ctx.buf) then
-					local buffer = require("shelter.integrations.buffer")
-					buffer.shelter_preview_buffer(ctx.buf, filename)
+					local filepath = ctx.item and ctx.item.file
+					local filename = filepath and vim.fn.fnamemodify(filepath, ":t")
+					-- Detect filetype from filename since preview buffers have their own filetype
+					local filetype = filepath and vim.filetype.match({ filename = filepath })
+					if filetype and env_file.is_env_filetype(filetype) then
+						local buffer = require("shelter.integrations.buffer")
+						buffer.shelter_preview_buffer(ctx.buf, filename, filetype)
+					end
 				end
 			end)
 		end
