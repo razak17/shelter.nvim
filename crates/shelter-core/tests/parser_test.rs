@@ -25,7 +25,9 @@ unsafe fn parse_content(content: &str) -> ParseResult {
 
     // Check for errors
     if !result_ref.error.is_null() {
-        let error_msg = CStr::from_ptr(result_ref.error).to_string_lossy().into_owned();
+        let error_msg = CStr::from_ptr(result_ref.error)
+            .to_string_lossy()
+            .into_owned();
         shelter_free_result(result);
         panic!("Parse error: {}", error_msg);
     }
@@ -234,7 +236,10 @@ fn test_parse_comment_with_keyvalue_inside() {
     // Check if comment key-value is extracted (depends on korni behavior)
     let comment_key = result.entries.iter().find(|e| e.key == "COMMENTED_KEY");
     if let Some(ck) = comment_key {
-        assert!(ck.is_comment, "Key from comment line should have is_comment=true");
+        assert!(
+            ck.is_comment,
+            "Key from comment line should have is_comment=true"
+        );
     }
 }
 
@@ -439,7 +444,10 @@ fn test_parse_null_input() {
         assert!(!result.is_null());
 
         let result_ref = &*result;
-        assert!(!result_ref.error.is_null(), "Should return error for null input");
+        assert!(
+            !result_ref.error.is_null(),
+            "Should return error for null input"
+        );
 
         shelter_free_result(result);
     }

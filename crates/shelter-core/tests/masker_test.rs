@@ -162,7 +162,10 @@ fn test_mask_full_ffi_null_input() {
 #[test]
 fn test_mask_partial_basic() {
     // "secretvalue" -> "sec*****lue" (show 3 start, 3 end, mask middle)
-    assert_eq!(mask_partial("secretvalue", '*', 3, 3, 3, None), "sec*****lue");
+    assert_eq!(
+        mask_partial("secretvalue", '*', 3, 3, 3, None),
+        "sec*****lue"
+    );
 }
 
 #[test]
@@ -204,7 +207,10 @@ fn test_mask_partial_unicode_boundaries() {
 
 #[test]
 fn test_mask_partial_with_output_len() {
-    assert_eq!(mask_partial("secretvalue", '*', 3, 3, 3, Some(15)), "sec*********lue");
+    assert_eq!(
+        mask_partial("secretvalue", '*', 3, 3, 3, Some(15)),
+        "sec*********lue"
+    );
 }
 
 #[test]
@@ -340,7 +346,10 @@ fn test_mask_value_ffi_partial() {
 
 #[test]
 fn test_mask_with_mode_full() {
-    assert_eq!(mask_with_mode("secret", ShelterMaskMode::Full, '*'), "******");
+    assert_eq!(
+        mask_with_mode("secret", ShelterMaskMode::Full, '*'),
+        "******"
+    );
 }
 
 #[test]

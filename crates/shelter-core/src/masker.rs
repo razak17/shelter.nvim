@@ -45,7 +45,9 @@ pub fn mask_partial(
 
     // Calculate target length
     let target_len = output_len.unwrap_or(value_len);
-    let available_middle = target_len.saturating_sub(show_start).saturating_sub(show_end);
+    let available_middle = target_len
+        .saturating_sub(show_start)
+        .saturating_sub(show_end);
 
     // If not enough room for min_mask, fall back to full mask
     if available_middle < min_mask {
@@ -115,7 +117,10 @@ mod tests {
 
     #[test]
     fn test_mask_partial() {
-        assert_eq!(mask_partial("secretvalue", '*', 3, 3, 3, None), "sec*****lue");
+        assert_eq!(
+            mask_partial("secretvalue", '*', 3, 3, 3, None),
+            "sec*****lue"
+        );
         assert_eq!(mask_partial("short", '*', 3, 3, 3, None), "*****"); // Too short, full mask
         assert_eq!(mask_partial("abcdefghij", '*', 2, 2, 3, None), "ab******ij");
     }
