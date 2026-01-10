@@ -11,7 +11,7 @@ use crate::types::{ShelterMaskMode, ShelterMaskOptions};
 #[inline]
 pub fn mask_full(value: &str, mask_char: char, output_len: Option<usize>) -> String {
     let len = output_len.unwrap_or(value.len());
-    std::iter::repeat(mask_char).take(len).collect()
+    std::iter::repeat_n(mask_char, len).collect()
 }
 
 /// Generate a fixed-length mask
@@ -19,7 +19,7 @@ pub fn mask_full(value: &str, mask_char: char, output_len: Option<usize>) -> Str
 /// Single allocation.
 #[inline]
 pub fn mask_fixed(_value: &str, mask_char: char, length: usize) -> String {
-    std::iter::repeat(mask_char).take(length).collect()
+    std::iter::repeat_n(mask_char, length).collect()
 }
 
 /// Generate a partial mask (show start/end characters)
@@ -61,7 +61,7 @@ pub fn mask_partial(
     result.extend(chars.iter().take(show_start));
 
     // Extend middle mask in place
-    result.extend(std::iter::repeat(mask_char).take(available_middle));
+    result.extend(std::iter::repeat_n(mask_char, available_middle));
 
     // Extend end portion in place
     if show_end > 0 && chars.len() > show_end {
