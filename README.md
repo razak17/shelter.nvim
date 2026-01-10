@@ -46,7 +46,7 @@ EDF-compliant dotenv file masking for Neovim with a Rust-native core.
 
 | Feature               | shelter.nvim                                                        | [cloak.nvim](https://github.com/laytan/cloak.nvim)   |
 | --------------------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
-| Partial Value Masking | ✅ Built-in `partial` mode (`abc***xyz`)                            | 🟡 Configurable masking patterns                     |
+| Partial Value Masking | ✅ Built-in `partial` mode (`abc***xyz`)                            | 🟡 Prefix only via `replace` patterns                |
 | Per-Key Masking Modes | ✅ Glob patterns map to modes (`*_SECRET` -> full, `DEBUG` -> none) | 🟡 Lua patterns with replace, but same masking style |
 | Per-Source File Modes | ✅ Different modes per env file (`.env.prod` vs `.env.local`)       | 🟡 Separate pattern entries per file_pattern         |
 | Custom Mode System    | ✅ Full factory pattern with programmatic API                       | 🟡 Via Lua replace patterns only                     |
@@ -58,7 +58,7 @@ EDF-compliant dotenv file masking for Neovim with a Rust-native core.
 | Mask on Leave         | ✅ Configurable                                                     | ✅ Configurable                                      |
 | Hide True Length      | ✅ Via mode options (`fixed_length`)                                | ✅ Built-in (`cloak_length`)                         |
 | Custom Highlights     | ✅ Configurable highlight group                                     | ✅ Configurable highlight group                      |
-| Performance           | ✅ Rust-native parsing via LuaJIT FFI, optimized for large files    | 🟡 Pure Lua, simpler but slower on large files       |
+| Performance           | ✅ Rust-native parsing via LuaJIT FFI, optimized for large files    | 🟡 Pure Lua, simpler implementation                  |
 | Runtime Info          | ✅ `:Shelter info` shows status and modes                           | ❌ No runtime introspection                          |
 | Lines of Code         | 🟡 ~2500+ LOC (Lua + Rust)                                          | ✅ ~300 LOC                                          |
 | Build Step            | 🟡 Requires Rust toolchain                                          | ✅ None, pure Lua                                    |
@@ -73,6 +73,21 @@ Choose shelter.nvim if you work with **dotenv files**. It's built specifically f
 
 Choose cloak.nvim if you need to mask values in **any filetype** (not just env files), want a **pure-Lua solution** with no build step, or prefer minimal setup with Lua pattern syntax.
 
+<!-- BENCHMARK_START -->
+### Performance Benchmarks
+
+Measured on GitHub Actions (Ubuntu, averaged over 10 iterations):
+
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | --.-- ms     | --.-- ms   | -- |
+| 50    | --.-- ms     | --.-- ms   | -- |
+| 100   | --.-- ms     | --.-- ms   | -- |
+| 500   | --.-- ms     | --.-- ms   | -- |
+
+*Benchmarks run automatically on push to main*
+<!-- BENCHMARK_END -->
+
 ## Requirements
 
 - Neovim 0.9+
@@ -85,8 +100,8 @@ Choose cloak.nvim if you need to mask values in **any filetype** (not just env f
 
 ```lua
 {
-  "philosofonusus/shelter.nvim",
-  build = "lua build.lua",
+  "ph1losof/shelter.nvim",
+  build = "build.lua",
   config = function()
     require("shelter").setup({
       -- Configuration here
@@ -99,8 +114,8 @@ Choose cloak.nvim if you need to mask values in **any filetype** (not just env f
 
 ```lua
 use {
-  "philosofonusus/shelter.nvim",
-  run = "lua build.lua",
+  "ph1losof/shelter.nvim",
+  run = "build.lua",
   config = function()
     require("shelter").setup()
   end,
