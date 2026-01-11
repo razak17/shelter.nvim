@@ -228,40 +228,38 @@ local shelter = require("shelter")
 ## Performance
 
 <!-- BENCHMARK_START -->
-
 ### Performance Benchmarks
 
 Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 #### Parsing Performance
 
-| Lines | shelter.nvim | cloak.nvim | Difference  |
-| ----- | ------------ | ---------- | ----------- |
-| 10    | 0.01 ms      | 0.04 ms    | 4.0x faster |
-| 50    | 0.05 ms      | 0.19 ms    | 3.5x faster |
-| 100   | 0.11 ms      | 0.36 ms    | 3.3x faster |
-| 500   | 0.49 ms      | 1.79 ms    | 3.7x faster |
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.01 ms      | 0.04 ms      | 4.0x faster |
+| 50    | 0.06 ms      | 0.18 ms      | 3.2x faster |
+| 100    | 0.11 ms      | 0.35 ms      | 3.3x faster |
+| 500    | 0.45 ms      | 1.78 ms      | 3.9x faster |
 
 #### Preview Performance (Telescope)
 
-| Lines | shelter.nvim | cloak.nvim | Difference   |
-| ----- | ------------ | ---------- | ------------ |
-| 10    | 0.01 ms      | 0.04 ms    | 5.6x faster  |
-| 50    | 0.03 ms      | 0.19 ms    | 6.5x faster  |
-| 100   | 0.04 ms      | 0.38 ms    | 9.0x faster  |
-| 500   | 0.19 ms      | 1.85 ms    | 10.0x faster |
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.01 ms      | 0.05 ms      | 5.8x faster |
+| 50    | 0.03 ms      | 0.18 ms      | 6.1x faster |
+| 100    | 0.04 ms      | 0.38 ms      | 9.6x faster |
+| 500    | 0.18 ms      | 1.85 ms      | 10.3x faster |
 
 #### Edit Re-masking Performance
 
-| Lines | shelter.nvim | cloak.nvim | Difference  |
-| ----- | ------------ | ---------- | ----------- |
-| 10    | 0.04 ms      | 0.05 ms    | 1.1x faster |
-| 50    | 0.18 ms      | 0.20 ms    | 1.1x faster |
-| 100   | 0.37 ms      | 0.38 ms    | ~same       |
-| 500   | 1.86 ms      | 1.83 ms    | ~same       |
+| Lines | shelter.nvim | cloak.nvim | Difference |
+|-------|--------------|------------|------------|
+| 10    | 0.02 ms      | 0.05 ms      | 2.6x faster |
+| 50    | 0.04 ms      | 0.19 ms      | 5.2x faster |
+| 100    | 0.06 ms      | 0.37 ms      | 6.5x faster |
+| 500    | 0.33 ms      | 1.77 ms      | 5.4x faster |
 
-_Last updated: 2026-01-11_
-
+*Last updated: 2026-01-11*
 <!-- BENCHMARK_END -->
 
 ### Why So Fast?
