@@ -54,7 +54,7 @@ local function attach_buffer(bufnr)
 	end
 
 	api.nvim_buf_attach(bufnr, false, {
-		on_lines = function(_, buf, _, first_line, _, last_line_updated)
+		on_lines = function(_, buf, _, first_line, last_line, last_line_updated)
 			-- Skip if not enabled or paste in progress
 			if not state.is_enabled("files") then
 				return
@@ -64,9 +64,11 @@ local function attach_buffer(bufnr)
 			end
 
 			-- Immediate re-mask with line range (no debounce - line-specific is fast)
+			-- Use max of last_line (before change) and last_line_updated (after change)
+			-- to cover full affected range during undo/redo operations
 			local line_range = {
 				min_line = first_line,
-				max_line = last_line_updated,
+				max_line = math_max(last_line, last_line_updated),
 			}
 			M.shelter_buffer(buf, true, line_range)
 		end,
