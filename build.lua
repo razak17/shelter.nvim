@@ -74,7 +74,7 @@ local function build_from_source()
     return false
   end
 
-  local src = plugin_dir .. "/../../target/release/" .. lib_name
+  local src = crate_dir .. "/target/release/" .. lib_name
   local dst_dir = plugin_dir .. "/lib"
   local dst = dst_dir .. "/" .. lib_name
 

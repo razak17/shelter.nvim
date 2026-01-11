@@ -159,7 +159,7 @@ function M.build()
 					or uname.sysname == "Windows" and "shelter_core.dll"
 					or "libshelter_core.so"
 
-				local src = plugin_dir .. "/../../target/release/" .. lib_name
+				local src = crate_dir .. "/target/release/" .. lib_name
 				local dst = plugin_dir .. "/lib/" .. lib_name
 
 				vim.fn.mkdir(plugin_dir .. "/lib", "p")
@@ -227,6 +227,13 @@ end
 function M.is_setup()
 	return is_setup
 end
+
+-- Always register ShelterBuild command so users can build even if setup fails
+vim.api.nvim_create_user_command("ShelterBuild", function()
+	M.build()
+end, {
+	desc = "Build or download shelter.nvim native library",
+})
 
 ---Get configuration
 ---@return ShelterUserConfig
