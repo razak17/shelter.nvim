@@ -57,29 +57,35 @@ local function build_sync()
 	return false
 end
 
+---Check if the native library file exists
+---@return boolean
+local function library_file_exists()
+	local source = debug.getinfo(1, "S").source:sub(2)
+	local plugin_dir = vim.fn.fnamemodify(source, ":h:h:h")
+
+	local uname = vim.uv.os_uname()
+	local lib_name = uname.sysname == "Darwin" and "libshelter_core.dylib"
+		or uname.sysname == "Windows" and "shelter_core.dll"
+		or "libshelter_core.so"
+
+	return vim.fn.filereadable(plugin_dir .. "/lib/" .. lib_name) == 1
+end
+
 ---Setup shelter.nvim
 ---@param opts? ShelterUserConfig
 function M.setup(opts)
 	-- Configure
 	config.setup(opts)
 
-	-- Check if native library is available
-	local native_ok, native = pcall(require, "shelter.native")
-	local available = native_ok and native.is_available()
-
-	-- Auto-build if not available
-	if not available then
+	-- Check if library file exists, build if not
+	if not library_file_exists() then
 		vim.notify("shelter.nvim: Native library not found, building...", vim.log.levels.INFO)
-		local build_ok = build_sync()
-		if build_ok then
-			-- Clear module cache and retry
-			package.loaded["shelter.native"] = nil
-			native_ok, native = pcall(require, "shelter.native")
-			available = native_ok and native.is_available()
-		end
+		build_sync()
 	end
 
-	if not available then
+	-- Now try to load the native module
+	local native_ok, native = pcall(require, "shelter.native")
+	if not native_ok or not native.is_available() then
 		vim.notify("shelter.nvim: Failed to load native library. Run :ShelterBuild to reinstall.", vim.log.levels.ERROR)
 		return
 	end
