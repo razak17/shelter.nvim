@@ -80,7 +80,10 @@ function M.setup(opts)
 	-- Check if library file exists, build if not
 	if not library_file_exists() then
 		vim.notify("shelter.nvim: Native library not found, building...", vim.log.levels.INFO)
-		build_sync()
+		local build_ok = build_sync()
+		if build_ok then
+			vim.notify("shelter.nvim: Build successful!", vim.log.levels.INFO)
+		end
 	end
 
 	-- Now try to load the native module
