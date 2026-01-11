@@ -24,7 +24,6 @@
 
 ## Table of Contents
 
-- [Performance](#performance)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -33,56 +32,11 @@
 - [Commands](#commands)
 - [Mode System](#mode-system)
 - [Pattern Matching](#pattern-matching)
+- [Performance](#performance)
 - [Comparison with cloak.nvim](#comparison-with-cloaknvim)
 - [API Reference](#api-reference)
 - [Architecture](#architecture)
 - [License](#license)
-
----
-
-## Performance
-
-<!-- BENCHMARK_START -->
-### Performance Benchmarks
-
-Measured on GitHub Actions (Ubuntu, averaged over 100 iterations):
-
-#### Parsing Performance
-
-| Lines | shelter.nvim | cloak.nvim | Difference |
-|-------|--------------|------------|------------|
-| 10    | 0.03 ms      | 0.05 ms      | 1.9x faster |
-| 50    | 0.05 ms      | 0.18 ms      | 3.7x faster |
-| 100    | 0.08 ms      | 0.36 ms      | 4.6x faster |
-| 500    | 0.37 ms      | 1.78 ms      | 4.8x faster |
-
-#### Preview Performance (Telescope)
-
-| Lines | shelter.nvim | cloak.nvim | Difference |
-|-------|--------------|------------|------------|
-| 10    | 0.03 ms      | 0.05 ms      | 1.7x faster |
-| 50    | 0.05 ms      | 0.18 ms      | 3.5x faster |
-| 100    | 0.06 ms      | 0.37 ms      | 5.8x faster |
-| 500    | 0.41 ms      | 1.92 ms      | 4.7x faster |
-
-#### Edit Re-masking Performance
-
-| Lines | shelter.nvim | cloak.nvim | Difference |
-|-------|--------------|------------|------------|
-| 10    | 0.04 ms      | 0.05 ms      | 1.4x faster |
-| 50    | 0.15 ms      | 0.19 ms      | 1.2x faster |
-| 100    | 0.32 ms      | 0.38 ms      | 1.2x faster |
-| 500    | 1.81 ms      | 1.70 ms      | 1.1x slower |
-
-*Last updated: 2026-01-10*
-<!-- BENCHMARK_END -->
-
-### Why So Fast?
-
-1. **Rust-Native Parsing**: EDF parsing via LuaJIT FFI - no Lua pattern matching overhead
-2. **Line-Specific Re-masking**: On edit, only affected lines are re-processed
-3. **Zero Debounce**: Instant mask updates with `nvim_buf_attach` on_lines callback
-4. **Pre-computed Offsets**: O(1) byte-to-line conversion from Rust
 
 ---
 
@@ -123,7 +77,7 @@ Measured on GitHub Actions (Ubuntu, averaged over 100 iterations):
 
 ```lua
 {
-  "ph1losof/shelter.nvim",
+  "philosofonusus/shelter.nvim",
   build = "build.lua",
   config = function()
     require("shelter").setup({})
@@ -135,7 +89,7 @@ Measured on GitHub Actions (Ubuntu, averaged over 100 iterations):
 
 ```lua
 use {
-  "ph1losof/shelter.nvim",
+  "philosofonusus/shelter.nvim",
   run = "build.lua",
   config = function()
     require("shelter").setup({})
@@ -333,6 +287,54 @@ sources = {
 1. Specific key pattern match
 2. Specific source pattern match
 3. Default mode
+
+---
+
+## Performance
+
+<!-- BENCHMARK_START -->
+
+### Performance Benchmarks
+
+Measured on GitHub Actions (Ubuntu, averaged over 100 iterations):
+
+#### Parsing Performance
+
+| Lines | shelter.nvim | cloak.nvim | Difference  |
+| ----- | ------------ | ---------- | ----------- |
+| 10    | 0.03 ms      | 0.05 ms    | 1.9x faster |
+| 50    | 0.05 ms      | 0.18 ms    | 3.7x faster |
+| 100   | 0.08 ms      | 0.36 ms    | 4.6x faster |
+| 500   | 0.37 ms      | 1.78 ms    | 4.8x faster |
+
+#### Preview Performance (Telescope)
+
+| Lines | shelter.nvim | cloak.nvim | Difference  |
+| ----- | ------------ | ---------- | ----------- |
+| 10    | 0.03 ms      | 0.05 ms    | 1.7x faster |
+| 50    | 0.05 ms      | 0.18 ms    | 3.5x faster |
+| 100   | 0.06 ms      | 0.37 ms    | 5.8x faster |
+| 500   | 0.41 ms      | 1.92 ms    | 4.7x faster |
+
+#### Edit Re-masking Performance
+
+| Lines | shelter.nvim | cloak.nvim | Difference  |
+| ----- | ------------ | ---------- | ----------- |
+| 10    | 0.04 ms      | 0.05 ms    | 1.4x faster |
+| 50    | 0.15 ms      | 0.19 ms    | 1.2x faster |
+| 100   | 0.32 ms      | 0.38 ms    | 1.2x faster |
+| 500   | 1.81 ms      | 1.70 ms    | 1.1x slower |
+
+_Last updated: 2026-01-10_
+
+<!-- BENCHMARK_END -->
+
+### Why So Fast?
+
+1. **Rust-Native Parsing**: EDF parsing via LuaJIT FFI - no Lua pattern matching overhead
+2. **Line-Specific Re-masking**: On edit, only affected lines are re-processed
+3. **Zero Debounce**: Instant mask updates with `nvim_buf_attach` on_lines callback
+4. **Pre-computed Offsets**: O(1) byte-to-line conversion from Rust
 
 ---
 
