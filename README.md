@@ -1,6 +1,6 @@
 # shelter.nvim
 
-![CleanShot 2026-01-11 at 01 42 05](https://github.com/user-attachments/assets/734c9703-b1a1-4eb2-acc2-bae779db0ad4)
+![CleanShot 2026-01-11 at 01 50 01](https://github.com/user-attachments/assets/02033038-51d4-40c7-a853-6972882a7bcf)
 
 ![Neovim](https://img.shields.io/badge/NeoVim-%2357A143.svg?&style=for-the-badge&logo=neovim&logoColor=white)
 ![Lua](https://img.shields.io/badge/lua-%232C2D72.svg?style=for-the-badge&logo=lua&logoColor=white)
