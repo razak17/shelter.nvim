@@ -8,7 +8,7 @@
 -- 2. Preview: Masking a preview buffer (Telescope scenario)
 -- 3. Edit: Re-masking after text change (typing scenario)
 
-local ITERATIONS = 1000
+local ITERATIONS = 10000
 local SIZES = { 10, 50, 100, 500 }
 local OUTPUT_FILE = "benchmark_results.json"
 
