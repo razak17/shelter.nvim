@@ -33,6 +33,15 @@ local buffer_attached = {} -- bufnr → true if attached
 -- Per-buffer mask cache for incremental updates
 local buffer_mask_cache = {}
 
+-- Flag to force full re-mask after paste (cleared after one use)
+local needs_full_remask = {}
+
+---Mark buffer as needing full re-mask on next edit (called after paste)
+---@param bufnr number
+function M.mark_needs_full_remask(bufnr)
+	needs_full_remask[bufnr] = true
+end
+
 ---@class ShelterBufferMaskCache
 ---@field masks ShelterMaskedLine[]
 ---@field line_offsets number[]
@@ -97,18 +106,18 @@ local function attach_buffer(bufnr)
 				return
 			end
 
-			-- Check if line count changed (lines added/removed via undo/redo, Enter, delete, etc.)
+			-- Check if line count changed (lines added/removed)
 			if last_line ~= last_line_updated then
-				-- Line count changed - defer full re-mask to next event loop tick
-				-- This ensures buffer state is fully settled after undo/redo
+				-- Line count changed - must do full re-mask
 				buffer_content_hashes[buf] = nil
+				invalidate_buffer_cache(buf)
 				vim.schedule(function()
 					if nvim_buf_is_valid(buf) and state.is_enabled("files") then
 						M.shelter_buffer(buf, true)
 					end
 				end)
 			else
-				-- Same line count - incremental update is safe and can be sync
+				-- Same line count - can use incremental path
 				local line_range = {
 					min_line = first_line,
 					max_line = last_line_updated,
@@ -157,18 +166,25 @@ function M.shelter_buffer(bufnr, sync, line_range)
 	-- Check cache for incremental updates
 	local cache = get_buffer_cache(bufnr)
 
-	if line_range and cache and cache.line_count == #lines then
-		-- INCREMENTAL PATH: Only update affected lines
-		-- Add 1 line buffer on each side for multi-line values
-		local clear_start = math_max(0, line_range.min_line - 1)
-		local clear_end = math_min(#lines, line_range.max_line + 2)
-		extmarks.clear_range(bufnr, clear_start, clear_end)
+	if needs_full_remask[bufnr] then
+		-- After paste, force full re-mask to handle undo correctly
+		needs_full_remask[bufnr] = nil
+		invalidate_buffer_cache(bufnr)
+		buffer_content_hashes[bufnr] = nil
+		-- Fall through to FULL PATH below
+	elseif line_range and cache and cache.line_count == #lines then
+		-- INCREMENTAL PATH: Only re-parse changed lines
+		local parse_start = math_max(1, line_range.min_line) -- 0-indexed to 1-indexed
+		local parse_end = math_min(#lines, line_range.max_line + 2) -- +1 for exclusive, +1 for buffer
 
-		-- Generate masks only for affected range (1-indexed)
+		-- Clear only affected range
+		extmarks.clear_range(bufnr, parse_start - 1, parse_end)
+
+		-- Generate masks ONLY for the edited range
 		local result = masking.generate_masks_incremental(
 			content,
 			bufname,
-			{ min_line = clear_start + 1, max_line = clear_end },
+			{ min_line = parse_start, max_line = parse_end },
 			cache.masks
 		)
 
@@ -177,42 +193,43 @@ function M.shelter_buffer(bufnr, sync, line_range)
 
 		-- Apply ONLY the new/changed masks
 		extmarks.apply_masks(bufnr, result.masks_to_apply, result.line_offsets, lines, sync)
-	else
-		-- FULL PATH: Parse and mask everything
+		return
+	end
 
-		-- Skip if content unchanged (for non-incremental calls)
-		if not line_range then
-			local content_len = #content
-			local simple_hash
-			if content_len < 512 then
-				simple_hash = content_len .. ":" .. content:sub(1, 64)
-			else
-				simple_hash = content_len .. ":" .. content:sub(1, 32) .. content:sub(-32)
-			end
+	-- FULL PATH: Parse and mask everything
 
-			if buffer_content_hashes[bufnr] == simple_hash then
-				return -- Content unchanged, skip re-masking
-			end
-			buffer_content_hashes[bufnr] = simple_hash
+	-- Skip if content unchanged (for non-incremental calls)
+	if not line_range then
+		local content_len = #content
+		local simple_hash
+		if content_len < 512 then
+			simple_hash = content_len .. ":" .. content:sub(1, 64)
+		else
+			simple_hash = content_len .. ":" .. content:sub(1, 32) .. content:sub(-32)
 		end
 
-		-- Invalidate cache and clear extmarks
-		invalidate_buffer_cache(bufnr)
-		extmarks.clear(bufnr)
-
-		-- Generate masks (includes pre-computed line_offsets from Rust)
-		local result = masking.generate_masks(content, bufname)
-
-		-- line_offsets must be provided by Rust - no fallbacks
-		local line_offsets = result.line_offsets
-		assert(line_offsets and #line_offsets > 0, "shelter.nvim: line_offsets not provided by native parser")
-
-		-- Cache for future incremental updates
-		set_buffer_cache(bufnr, result.masks, line_offsets, #lines)
-
-		-- Apply all masks
-		extmarks.apply_masks(bufnr, result.masks, line_offsets, lines, sync)
+		if buffer_content_hashes[bufnr] == simple_hash then
+			return -- Content unchanged, skip re-masking
+		end
+		buffer_content_hashes[bufnr] = simple_hash
 	end
+
+	-- Invalidate cache and clear extmarks
+	invalidate_buffer_cache(bufnr)
+	extmarks.clear(bufnr)
+
+	-- Generate masks (includes pre-computed line_offsets from Rust)
+	local result = masking.generate_masks(content, bufname)
+
+	-- line_offsets must be provided by Rust - no fallbacks
+	local line_offsets = result.line_offsets
+	assert(line_offsets and #line_offsets > 0, "shelter.nvim: line_offsets not provided by native parser")
+
+	-- Cache for future incremental updates
+	set_buffer_cache(bufnr, result.masks, line_offsets, #lines)
+
+	-- Apply all masks
+	extmarks.apply_masks(bufnr, result.masks, line_offsets, lines, sync)
 end
 
 ---Shelter a preview buffer (for picker integrations)

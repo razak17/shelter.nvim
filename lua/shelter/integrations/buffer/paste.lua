@@ -91,11 +91,20 @@ function M.setup(apply_masks_fn, generate_masks_fn)
 		local all_lines = nvim_buf_get_lines(bufnr, 0, -1, false)
 		local content = table_concat(all_lines, "\n")
 
+		-- CRITICAL: Clear ALL existing extmarks BEFORE applying new ones
+		-- Old extmarks can be on wrong lines after content shifts during paste
+		local extmarks = require("shelter.integrations.buffer.extmarks")
+		extmarks.clear(bufnr)
+
 		-- Generate and apply masks synchronously
 		local result = generate_masks_fn(content, bufname)
 		if result.line_offsets and #result.line_offsets > 0 then
 			apply_masks_fn(bufnr, result.masks, result.line_offsets, all_lines, true) -- sync=true
 		end
+
+		-- Mark buffer for full re-mask on next edit (handles undo correctly)
+		local buffer_integration = require("shelter.integrations.buffer")
+		buffer_integration.mark_needs_full_remask(bufnr)
 
 		-- Restore lazyredraw and force a single redraw with masked content
 		vim.o.lazyredraw = old_lazyredraw

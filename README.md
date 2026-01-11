@@ -68,14 +68,14 @@ require("shelter").setup({
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `:Shelter toggle [module]` | Toggle masking on/off |
-| `:Shelter enable [module]` | Enable masking |
-| `:Shelter disable [module]` | Disable masking |
-| `:Shelter peek` | Reveal current line temporarily |
-| `:Shelter info` | Show status and modes |
-| `:Shelter build` | Rebuild native library |
+| Command                     | Description                     |
+| --------------------------- | ------------------------------- |
+| `:Shelter toggle [module]`  | Toggle masking on/off           |
+| `:Shelter enable [module]`  | Enable masking                  |
+| `:Shelter disable [module]` | Disable masking                 |
+| `:Shelter peek`             | Reveal current line temporarily |
+| `:Shelter info`             | Show status and modes           |
+| `:Shelter build`            | Rebuild native library          |
 
 **Modules:** `files`, `telescope_previewer`, `fzf_previewer`, `snacks_previewer`
 
@@ -109,11 +109,11 @@ require("shelter").setup({
 
 ### Built-in Modes
 
-| Mode | Example | Description |
-|------|---------|-------------|
-| `full` | `secret123` → `*********` | Mask all characters |
-| `partial` | `secret123` → `sec****123` | Show start/end |
-| `none` | `secret123` → `secret123` | No masking |
+| Mode      | Example                    | Description         |
+| --------- | -------------------------- | ------------------- |
+| `full`    | `secret123` → `*********`  | Mask all characters |
+| `partial` | `secret123` → `sec****123` | Show start/end      |
+| `none`    | `secret123` → `secret123`  | No masking          |
 
 ### Mode Options
 
@@ -213,17 +213,17 @@ sources = {
 local shelter = require("shelter")
 ```
 
-| Function | Description |
-|----------|-------------|
-| `shelter.setup(opts)` | Initialize plugin |
-| `shelter.is_enabled(module)` | Check if module is enabled |
-| `shelter.toggle(module)` | Toggle module on/off |
-| `shelter.get_config()` | Get current configuration |
-| `shelter.peek()` | Reveal current line temporarily |
-| `shelter.info()` | Show plugin status |
-| `shelter.build()` | Rebuild native library |
-| `shelter.register_mode(name, def)` | Register custom mode |
-| `shelter.mask_value(value, opts)` | Mask a value directly |
+| Function                           | Description                     |
+| ---------------------------------- | ------------------------------- |
+| `shelter.setup(opts)`              | Initialize plugin               |
+| `shelter.is_enabled(module)`       | Check if module is enabled      |
+| `shelter.toggle(module)`           | Toggle module on/off            |
+| `shelter.get_config()`             | Get current configuration       |
+| `shelter.peek()`                   | Reveal current line temporarily |
+| `shelter.info()`                   | Show plugin status              |
+| `shelter.build()`                  | Rebuild native library          |
+| `shelter.register_mode(name, def)` | Register custom mode            |
+| `shelter.mask_value(value, opts)`  | Mask a value directly           |
 
 ## Performance
 
@@ -236,28 +236,28 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 | Lines | shelter.nvim | cloak.nvim | Difference |
 |-------|--------------|------------|------------|
-| 10    | 0.01 ms      | 0.05 ms      | 4.2x faster |
-| 50    | 0.06 ms      | 0.18 ms      | 3.2x faster |
-| 100    | 0.11 ms      | 0.37 ms      | 3.3x faster |
-| 500    | 0.48 ms      | 1.76 ms      | 3.7x faster |
+| 10    | 0.01 ms      | 0.04 ms      | 4.0x faster |
+| 50    | 0.05 ms      | 0.19 ms      | 3.5x faster |
+| 100    | 0.11 ms      | 0.36 ms      | 3.3x faster |
+| 500    | 0.49 ms      | 1.79 ms      | 3.7x faster |
 
 #### Preview Performance (Telescope)
 
 | Lines | shelter.nvim | cloak.nvim | Difference |
 |-------|--------------|------------|------------|
-| 10    | 0.01 ms      | 0.05 ms      | 6.6x faster |
-| 50    | 0.03 ms      | 0.19 ms      | 7.6x faster |
-| 100    | 0.05 ms      | 0.36 ms      | 7.6x faster |
-| 500    | 0.20 ms      | 1.82 ms      | 8.9x faster |
+| 10    | 0.01 ms      | 0.04 ms      | 5.6x faster |
+| 50    | 0.03 ms      | 0.19 ms      | 6.5x faster |
+| 100    | 0.04 ms      | 0.38 ms      | 9.0x faster |
+| 500    | 0.19 ms      | 1.85 ms      | 10.0x faster |
 
 #### Edit Re-masking Performance
 
 | Lines | shelter.nvim | cloak.nvim | Difference |
 |-------|--------------|------------|------------|
-| 10    | 0.02 ms      | 0.05 ms      | 2.7x faster |
-| 50    | 0.04 ms      | 0.19 ms      | 5.5x faster |
-| 100    | 0.07 ms      | 0.37 ms      | 5.7x faster |
-| 500    | 0.34 ms      | 1.82 ms      | 5.3x faster |
+| 10    | 0.04 ms      | 0.05 ms      | 1.1x faster |
+| 50    | 0.18 ms      | 0.20 ms      | 1.1x faster |
+| 100    | 0.37 ms      | 0.38 ms      | ~same |
+| 500    | 1.86 ms      | 1.83 ms      | ~same |
 
 *Last updated: 2026-01-11*
 <!-- BENCHMARK_END -->
@@ -271,18 +271,18 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 ## Comparison with cloak.nvim
 
-| Feature | shelter.nvim | cloak.nvim |
-|---------|--------------|------------|
-| Performance | ✅ 1.1x-5x faster | 🟡 Pure Lua |
-| Re-masking | ✅ Line-specific | 🟡 Full buffer |
-| Partial masking | ✅ Built-in | 🟡 Pattern workaround |
-| Multi-line values | ✅ Full support | ❌ None |
-| Quote handling | ✅ EDF compliant | 🟡 Pattern-dependent |
-| Preview support | ✅ Telescope, FZF, Snacks | 🟡 Telescope only |
-| Completion disable | ✅ nvim-cmp + blink-cmp | 🟡 nvim-cmp only |
-| Custom modes | ✅ Factory pattern | 🟡 Lua patterns |
-| Build step | 🟡 Requires Rust | ✅ None |
-| File types | 🟡 Env files only | ✅ Any filetype |
+| Feature            | shelter.nvim              | cloak.nvim            |
+| ------------------ | ------------------------- | --------------------- |
+| Performance        | ✅ 1.1x-5x faster         | 🟡 Pure Lua           |
+| Re-masking         | ✅ Line-specific          | 🟡 Full buffer        |
+| Partial masking    | ✅ Built-in               | 🟡 Pattern workaround |
+| Multi-line values  | ✅ Full support           | ❌ None               |
+| Quote handling     | ✅ EDF compliant          | 🟡 Pattern-dependent  |
+| Preview support    | ✅ Telescope, FZF, Snacks | 🟡 Telescope only     |
+| Completion disable | ✅ nvim-cmp + blink-cmp   | 🟡 nvim-cmp only      |
+| Custom modes       | ✅ Factory pattern        | 🟡 Lua patterns       |
+| Build step         | 🟡 Requires Rust          | ✅ None               |
+| File types         | 🟡 Env files only         | ✅ Any filetype       |
 
 **Choose shelter.nvim** for dotenv files with maximum performance and features.
 
