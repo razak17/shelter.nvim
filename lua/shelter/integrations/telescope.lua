@@ -2,8 +2,7 @@
 ---Telescope previewer integration for shelter.nvim
 local M = {}
 
-local state = require("shelter.state")
-local env_file = require("shelter.utils.env_file")
+local preview_base = require("shelter.integrations.preview_base")
 
 ---Create a masked buffer previewer
 ---@param preview_type "file"|"grep"
@@ -11,9 +10,9 @@ local env_file = require("shelter.utils.env_file")
 local function create_masked_previewer(preview_type)
 	return function(opts)
 		-- If feature disabled, use original previewer
-		if not state.is_enabled("telescope_previewer") then
-			local orig = preview_type == "file" and state.get_original("file_previewer")
-				or state.get_original("grep_previewer")
+		if not preview_base.is_enabled("telescope_previewer") then
+			local orig_key = preview_type == "file" and "file_previewer" or "grep_previewer"
+			local orig = preview_base.get_original(orig_key)
 			return orig and orig(opts)
 		end
 
@@ -59,13 +58,7 @@ local function create_masked_previewer(preview_type)
 						end
 
 						-- Apply masking if env file
-						local filename = vim.fn.fnamemodify(path, ":t")
-						-- Detect filetype from filename since preview buffer may have different filetype
-						local filetype = vim.filetype.match({ filename = path })
-						if filetype and env_file.is_env_filetype(filetype) then
-							local buffer = require("shelter.integrations.buffer")
-							buffer.shelter_preview_buffer(bufnr, filename, filetype)
-						end
+						preview_base.apply_masking_if_env(bufnr, path)
 					end,
 				})
 			end,
@@ -81,15 +74,16 @@ function M.setup()
 		return
 	end
 
+	local state = require("shelter.state")
 	state.set_initial("telescope_previewer", true)
 
 	local conf = telescope_config.values
 
 	-- Store original previewers if not already stored
-	if not state.get_original("file_previewer") then
+	if not preview_base.get_original("file_previewer") then
 		state.set_original("file_previewer", conf.file_previewer)
 	end
-	if not state.get_original("grep_previewer") then
+	if not preview_base.get_original("grep_previewer") then
 		state.set_original("grep_previewer", conf.grep_previewer)
 	end
 
@@ -105,15 +99,16 @@ function M.cleanup()
 		return
 	end
 
+	local state = require("shelter.state")
 	local conf = telescope_config.values
 
-	local orig_file = state.get_original("file_previewer")
+	local orig_file = preview_base.get_original("file_previewer")
 	if orig_file then
 		conf.file_previewer = orig_file
 		state.clear_original("file_previewer")
 	end
 
-	local orig_grep = state.get_original("grep_previewer")
+	local orig_grep = preview_base.get_original("grep_previewer")
 	if orig_grep then
 		conf.grep_previewer = orig_grep
 		state.clear_original("grep_previewer")

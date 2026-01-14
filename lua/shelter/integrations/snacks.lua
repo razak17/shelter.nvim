@@ -2,69 +2,57 @@
 ---Snacks.nvim previewer integration for shelter.nvim
 local M = {}
 
-local state = require("shelter.state")
-local env_file = require("shelter.utils.env_file")
+local preview_base = require("shelter.integrations.preview_base")
 
 ---Setup Snacks previewer integration
 function M.setup()
-	-- Check if snacks.nvim picker preview is available
-	local ok, preview = pcall(require, "snacks.picker.preview")
-	if not ok then
-		return
-	end
+	preview_base.setup_integration(
+		"snacks_previewer",
+		"snacks_preview",
+		function()
+			local ok, preview = pcall(require, "snacks.picker.preview")
+			return ok and preview or nil
+		end,
+		function(preview)
+			return preview.file
+		end,
+		function(preview)
+			preview.file = function(ctx)
+				local original = preview_base.get_original("snacks_preview")
 
-	state.set_initial("snacks_previewer", true)
-
-	-- Store original function if not already stored
-	if not state.get_original("snacks_preview") then
-		state.set_original("snacks_preview", preview.file)
-	end
-
-	-- Wrap the preview.file function
-	preview.file = function(ctx)
-		local original = state.get_original("snacks_preview")
-
-		-- Call original preview function first
-		if original then
-			original(ctx)
-		end
-
-		-- Apply masking if enabled
-		if state.is_enabled("snacks_previewer") then
-			vim.schedule(function()
-				if ctx.buf and vim.api.nvim_buf_is_valid(ctx.buf) then
-					-- Skip terminal buffers (e.g., lazygit)
-					local buftype = vim.bo[ctx.buf].buftype
-					if buftype == "terminal" then
-						return
-					end
-
-					local filepath = ctx.item and ctx.item.file
-					-- Detect filetype from filename since preview buffer has its own filetype
-					local filetype = filepath and vim.filetype.match({ filename = filepath })
-					if filetype and env_file.is_env_filetype(filetype) then
-						local filename = vim.fn.fnamemodify(filepath, ":t")
-						local buffer = require("shelter.integrations.buffer")
-						buffer.shelter_preview_buffer(ctx.buf, filename, filetype)
-					end
+				-- Call original preview function first
+				if original then
+					original(ctx)
 				end
-			end)
+
+				-- Apply masking if enabled
+				if preview_base.is_enabled("snacks_previewer") then
+					vim.schedule(function()
+						if ctx.buf and vim.api.nvim_buf_is_valid(ctx.buf) then
+							-- Skip terminal buffers (e.g., lazygit)
+							local buftype = vim.bo[ctx.buf].buftype
+							if buftype == "terminal" then
+								return
+							end
+
+							local filepath = ctx.item and ctx.item.file
+							preview_base.apply_masking_if_env(ctx.buf, filepath)
+						end
+					end)
+				end
+			end
 		end
-	end
+	)
 end
 
 ---Cleanup Snacks integration
 function M.cleanup()
-	local ok, preview = pcall(require, "snacks.picker.preview")
-	if not ok then
-		return
-	end
-
-	local original = state.get_original("snacks_preview")
-	if original then
+	preview_base.cleanup_integration("snacks_preview", function()
+		local ok, preview = pcall(require, "snacks.picker.preview")
+		return ok and preview or nil
+	end, function(preview, original)
 		preview.file = original
-		state.clear_original("snacks_preview")
-	end
+	end)
 end
 
 return M

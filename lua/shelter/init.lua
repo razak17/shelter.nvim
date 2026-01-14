@@ -19,6 +19,7 @@ local M = {}
 local config = require("shelter.config")
 local state = require("shelter.state")
 local module_validation = require("shelter.utils.module_validation")
+local platform = require("shelter.utils.platform")
 
 ---@type boolean
 local is_setup = false
@@ -29,12 +30,7 @@ local function build_sync()
 	local source = debug.getinfo(1, "S").source:sub(2)
 	local plugin_dir = vim.fn.fnamemodify(source, ":h:h:h")
 	local crate_dir = plugin_dir .. "/crates/shelter-core"
-
-	local uname = vim.uv.os_uname()
-	local lib_name = uname.sysname == "Darwin" and "libshelter_core.dylib"
-		or uname.sysname == "Windows" and "shelter_core.dll"
-		or "libshelter_core.so"
-
+	local lib_name = platform.get_library_name()
 	local dst = plugin_dir .. "/lib/" .. lib_name
 
 	-- Check if already exists
@@ -62,12 +58,7 @@ end
 local function library_file_exists()
 	local source = debug.getinfo(1, "S").source:sub(2)
 	local plugin_dir = vim.fn.fnamemodify(source, ":h:h:h")
-
-	local uname = vim.uv.os_uname()
-	local lib_name = uname.sysname == "Darwin" and "libshelter_core.dylib"
-		or uname.sysname == "Windows" and "shelter_core.dll"
-		or "libshelter_core.so"
-
+	local lib_name = platform.get_library_name()
 	return vim.fn.filereadable(plugin_dir .. "/lib/" .. lib_name) == 1
 end
 
@@ -255,11 +246,7 @@ function M.build()
 		on_exit = function(_, code)
 			if code == 0 then
 				-- Copy library to lib directory
-				local uname = vim.uv.os_uname()
-				local lib_name = uname.sysname == "Darwin" and "libshelter_core.dylib"
-					or uname.sysname == "Windows" and "shelter_core.dll"
-					or "libshelter_core.so"
-
+				local lib_name = platform.get_library_name()
 				local src = crate_dir .. "/target/release/" .. lib_name
 				local dst = plugin_dir .. "/lib/" .. lib_name
 

@@ -2,75 +2,49 @@
 ---FZF-lua previewer integration for shelter.nvim
 local M = {}
 
-local state = require("shelter.state")
-local env_file = require("shelter.utils.env_file")
+local preview_base = require("shelter.integrations.preview_base")
 
 ---Setup FZF previewer integration
 function M.setup()
-	-- Check if fzf-lua is available
-	local ok = pcall(require, "fzf-lua")
-	if not ok then
-		return
-	end
+	preview_base.setup_integration(
+		"fzf_previewer",
+		"fzf_preview_buf_post",
+		function()
+			local ok, builtin = pcall(require, "fzf-lua.previewer.builtin")
+			return ok and builtin or nil
+		end,
+		function(builtin)
+			return builtin.buffer_or_file.preview_buf_post
+		end,
+		function(builtin)
+			builtin.buffer_or_file.preview_buf_post = function(self, entry, min_winopts)
+				-- Call original first
+				local original = preview_base.get_original("fzf_preview_buf_post")
+				if original then
+					original(self, entry, min_winopts)
+				end
 
-	state.set_initial("fzf_previewer", true)
+				-- Check if feature is enabled
+				if not preview_base.is_enabled("fzf_previewer") then
+					return
+				end
 
-	local builtin = require("fzf-lua.previewer.builtin")
-	local buffer_or_file = builtin.buffer_or_file
-
-	-- Store original function if not already stored
-	if not state.get_original("fzf_preview_buf_post") then
-		state.set_original("fzf_preview_buf_post", buffer_or_file.preview_buf_post)
-	end
-
-	-- Override preview_buf_post
-	buffer_or_file.preview_buf_post = function(self, entry, min_winopts)
-		-- Call original first
-		local original = state.get_original("fzf_preview_buf_post")
-		if original then
-			original(self, entry, min_winopts)
+				-- Get filename from entry and apply masking
+				local filepath = entry.path or entry.filename or entry.name
+				preview_base.apply_masking_if_env(self.preview_bufnr, filepath)
+			end
 		end
-
-		-- Check if feature is enabled
-		if not state.is_enabled("fzf_previewer") then
-			return
-		end
-
-		-- Get buffer number
-		local bufnr = self.preview_bufnr
-		if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-			return
-		end
-
-		-- Get filename from entry
-		local filename = entry.path or entry.filename or entry.name
-		if not filename then
-			return
-		end
-
-		-- Apply masking if env file
-		local basename = vim.fn.fnamemodify(filename, ":t")
-		-- Detect filetype from filename since preview buffer may have different filetype
-		local filetype = vim.filetype.match({ filename = filename })
-		if filetype and env_file.is_env_filetype(filetype) then
-			local buffer = require("shelter.integrations.buffer")
-			buffer.shelter_preview_buffer(bufnr, basename, filetype)
-		end
-	end
+	)
 end
 
 ---Cleanup FZF integration
 function M.cleanup()
-	local ok, builtin = pcall(require, "fzf-lua.previewer.builtin")
-	if not ok then
-		return
-	end
-
-	local original = state.get_original("fzf_preview_buf_post")
-	if original then
+	preview_base.cleanup_integration("fzf_preview_buf_post", function()
+		local ok, builtin = pcall(require, "fzf-lua.previewer.builtin")
+		return ok and builtin or nil
+	end, function(builtin, original)
 		builtin.buffer_or_file.preview_buf_post = original
-		state.clear_original("fzf_preview_buf_post")
-	end
+	end)
 end
 
 return M

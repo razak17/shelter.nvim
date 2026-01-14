@@ -3,6 +3,7 @@
 local M = {}
 
 local ffi = require("ffi")
+local platform = require("shelter.utils.platform")
 
 -- FFI type definitions matching Rust types exactly
 -- Use pcall to handle "attempt to redefine" errors on module reload
@@ -55,16 +56,7 @@ local function find_library()
 	-- Get the plugin directory
 	local source = debug.getinfo(1, "S").source:sub(2)
 	local plugin_dir = vim.fn.fnamemodify(source, ":h:h:h")
-
-	-- Platform-specific library names
-	local lib_names = {
-		Darwin = "libshelter_core.dylib",
-		Linux = "libshelter_core.so",
-		Windows = "shelter_core.dll",
-	}
-
-	local uname = vim.uv.os_uname()
-	local lib_name = lib_names[uname.sysname] or lib_names.Linux
+	local lib_name = platform.get_library_name()
 
 	-- Search paths
 	local search_paths = {

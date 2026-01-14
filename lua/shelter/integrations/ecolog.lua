@@ -24,17 +24,13 @@ local state = require("shelter.state")
 local config = require("shelter.config")
 local masking = require("shelter.masking")
 
--- Setup state
-local is_setup = false
-
--- Store wrapped clients to avoid double-wrapping
-local wrapped_clients = {}
-
--- Autocmd group ID
-local augroup_id = nil
-
--- Hook ID for ecolog picker hook
-local picker_hook_id = nil
+-- Internal state (encapsulated)
+local internal = {
+	is_setup = false,
+	wrapped_clients = {}, -- Store wrapped clients to avoid double-wrapping
+	augroup_id = nil, -- Autocmd group ID
+	picker_hook_id = nil, -- Hook ID for ecolog picker hook
+}
 
 ---Mask a value using shelter's masking engine (same as buffer masking)
 ---@param value string Value to mask
@@ -209,7 +205,7 @@ local function wrap_client_request(client)
 	end
 
 	-- Skip if already wrapped
-	if wrapped_clients[client.id] then
+	if internal.wrapped_clients[client.id] then
 		return
 	end
 
@@ -280,7 +276,7 @@ local function wrap_client_request(client)
 	end
 
 	-- Mark as wrapped
-	wrapped_clients[client.id] = {
+	internal.wrapped_clients[client.id] = {
 		original_request = original_request,
 	}
 end
@@ -288,7 +284,7 @@ end
 ---Unwrap a client's request method
 ---@param client_id number LSP client ID
 local function unwrap_client_request(client_id)
-	local wrapped = wrapped_clients[client_id]
+	local wrapped = internal.wrapped_clients[client_id]
 	if not wrapped then
 		return
 	end
@@ -298,17 +294,17 @@ local function unwrap_client_request(client_id)
 		client.request = wrapped.original_request
 	end
 
-	wrapped_clients[client_id] = nil
+	internal.wrapped_clients[client_id] = nil
 end
 
 ---Setup LSP client wrapping via LspAttach autocmd
 function M._setup_lsp_attach()
 	-- Create autocmd group
-	augroup_id = vim.api.nvim_create_augroup("ShelterEcolog", { clear = true })
+	internal.augroup_id = vim.api.nvim_create_augroup("ShelterEcolog", { clear = true })
 
 	-- Wrap clients on attach
 	vim.api.nvim_create_autocmd("LspAttach", {
-		group = augroup_id,
+		group = internal.augroup_id,
 		callback = function(args)
 			local client = vim.lsp.get_client_by_id(args.data.client_id)
 			if client then
@@ -332,7 +328,7 @@ end
 ---Setup ecolog hooks for picker masking
 function M._setup_ecolog_hooks()
 	-- Prevent double registration
-	if picker_hook_id then
+	if internal.picker_hook_id then
 		return
 	end
 
@@ -359,7 +355,7 @@ function M._setup_ecolog_hooks()
 		end, { id = "shelter_picker", priority = 200 })
 	end)
 	if reg_ok1 then
-		picker_hook_id = id1
+		internal.picker_hook_id = id1
 	end
 
 	-- Note: We only use on_picker_entry, not on_variables_list
@@ -370,7 +366,7 @@ end
 ---Setup the ecolog integration
 ---@param opts? table Options (cmp, peek booleans)
 function M.setup(opts)
-	if is_setup then
+	if internal.is_setup then
 		return
 	end
 
@@ -403,7 +399,7 @@ function M.setup(opts)
 	-- Setup ecolog hooks for picker masking
 	M._setup_ecolog_hooks()
 
-	is_setup = true
+	internal.is_setup = true
 end
 
 ---Toggle a context or all contexts
@@ -457,13 +453,13 @@ end
 ---Check if setup has been done
 ---@return boolean
 function M.is_setup()
-	return is_setup
+	return internal.is_setup
 end
 
 ---Debug: Get wrapped clients info
 ---@return table
 function M.get_wrapped_clients()
-	return wrapped_clients
+	return internal.wrapped_clients
 end
 
 ---Debug: Show last hover content (set by wrapper)
@@ -474,12 +470,12 @@ function M.debug_wrap()
 	local clients = vim.lsp.get_clients({ name = "ecolog" })
 	for _, client in ipairs(clients) do
 		vim.notify("Found ecolog client: " .. client.id .. " name: " .. client.name)
-		if wrapped_clients[client.id] then
+		if internal.wrapped_clients[client.id] then
 			vim.notify("Already wrapped")
 		else
 			vim.notify("Wrapping now...")
 			wrap_client_request(client)
-			vim.notify("Wrapped: " .. tostring(wrapped_clients[client.id] ~= nil))
+			vim.notify("Wrapped: " .. tostring(internal.wrapped_clients[client.id] ~= nil))
 		end
 	end
 end
@@ -487,13 +483,13 @@ end
 ---Teardown integration (restore original request methods)
 function M.teardown()
 	-- Remove autocmds
-	if augroup_id then
-		vim.api.nvim_del_augroup_by_id(augroup_id)
-		augroup_id = nil
+	if internal.augroup_id then
+		vim.api.nvim_del_augroup_by_id(internal.augroup_id)
+		internal.augroup_id = nil
 	end
 
 	-- Unwrap all clients
-	for client_id, _ in pairs(wrapped_clients) do
+	for client_id, _ in pairs(internal.wrapped_clients) do
 		unwrap_client_request(client_id)
 	end
 
@@ -501,14 +497,14 @@ function M.teardown()
 	pcall(function()
 		local ecolog = require("ecolog")
 		local hooks = ecolog.hooks()
-		if picker_hook_id then
-			pcall(hooks.unregister, "on_picker_entry", picker_hook_id)
+		if internal.picker_hook_id then
+			pcall(hooks.unregister, "on_picker_entry", internal.picker_hook_id)
 		end
 	end)
-	picker_hook_id = nil
+	internal.picker_hook_id = nil
 
-	wrapped_clients = {}
-	is_setup = false
+	internal.wrapped_clients = {}
+	internal.is_setup = false
 end
 
 return M
