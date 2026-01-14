@@ -291,7 +291,7 @@ _Last updated: 2026-01-14_
 
 **Choose shelter.nvim** for dotenv files with maximum performance and features.
 
-**Choose cloak.nvim** for any filetype with minimal setup.
+**Choose cloak.nvim** for any filetype with minimal setup
 
 ## Architecture
 
