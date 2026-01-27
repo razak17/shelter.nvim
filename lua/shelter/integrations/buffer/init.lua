@@ -403,7 +403,7 @@ function M.setup()
 				return
 			end
 			local files_config = config.get_files_config()
-			if files_config.shelter_on_leave then
+			if files_config.shelter_on_leave and state.is_enabled("files") then
 				state.reset_revealed_lines()
 				state.enable_all_user_modules()
 				if state.is_enabled("files") and nvim_buf_is_valid(ev.buf) then
