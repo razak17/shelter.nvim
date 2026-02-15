@@ -65,3 +65,5 @@ if camo_ok then
     mask_char = "*",
   })
 end
+
+-- No setup needed for Pure Lua benchmark — it uses raw Lua pattern matching + extmarks directly

@@ -55,6 +55,7 @@ jobs:
       - name: Clone camouflage.nvim
         run: git clone --depth 1 https://github.com/zeybek/camouflage.nvim /tmp/camouflage.nvim
 
+
       - name: Run benchmarks
         run: |
           nvim --headless -u benchmarks/minimal_init.lua -l benchmarks/benchmark.lua
@@ -101,28 +102,32 @@ jobs:
               return '~same';
             };
 
-            const makeTable = (title, shelterKey, cloakKey, camouflageKey) => {
+            const fmtMs = (v) => v != null ? `${v.toFixed(2)} ms` : 'N/A';
+
+            const makeTable = (title, shelterKey, cloakKey, camouflageKey, pureLuaKey) => {
               let table = `#### ${title}\n\n`;
-              table += '| Lines | shelter.nvim | cloak.nvim | camouflage.nvim | vs cloak | vs camouflage |\n';
-              table += '|-------|--------------|------------|-----------------|----------|---------------|\n';
+              table += '| Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |\n';
+              table += '|-------|--------------|------------|-----------------|----------|----------|---------------|-------------|\n';
               const sizes = Object.keys(results.benchmarks).map(Number).sort((a, b) => a - b);
               for (const size of sizes) {
                 const data = results.benchmarks[size];
-                const shelter = `${data[shelterKey].toFixed(2)} ms`;
-                const cloak = data[cloakKey] ? `${data[cloakKey].toFixed(2)} ms` : 'N/A';
-                const camouflage = data[camouflageKey] ? `${data[camouflageKey].toFixed(2)} ms` : 'N/A';
+                const shelter = fmtMs(data[shelterKey]);
+                const cloak = fmtMs(data[cloakKey]);
+                const camouflage = fmtMs(data[camouflageKey]);
+                const pureLua = fmtMs(data[pureLuaKey]);
                 const cloakDiff = calcDiff(data[shelterKey], data[cloakKey]);
                 const camoDiff = calcDiff(data[shelterKey], data[camouflageKey]);
-                table += `| ${size} | ${shelter} | ${cloak} | ${camouflage} | ${cloakDiff} | ${camoDiff} |\n`;
+                const pureLuaDiff = calcDiff(data[shelterKey], data[pureLuaKey]);
+                table += `| ${size} | ${shelter} | ${cloak} | ${camouflage} | ${pureLua} | ${cloakDiff} | ${camoDiff} | ${pureLuaDiff} |\n`;
               }
               return table;
             };
 
             let body = '## Performance Benchmark Results\n\n';
             body += `Measured over ${results.metadata.iterations} iterations on Ubuntu:\n\n`;
-            body += makeTable('Parsing Performance', 'shelter_parse_ms', 'cloak_parse_ms', 'camouflage_parse_ms') + '\n';
-            body += makeTable('Preview Performance (Telescope)', 'shelter_preview_ms', 'cloak_preview_ms', 'camouflage_preview_ms') + '\n';
-            body += makeTable('Edit Re-masking Performance', 'shelter_edit_ms', 'cloak_edit_ms', 'camouflage_edit_ms');
+            body += makeTable('Parsing Performance', 'shelter_parse_ms', 'cloak_parse_ms', 'camouflage_parse_ms', 'pure_lua_parse_ms') + '\n';
+            body += makeTable('Preview Performance (Telescope)', 'shelter_preview_ms', 'cloak_preview_ms', 'camouflage_preview_ms', 'pure_lua_preview_ms') + '\n';
+            body += makeTable('Edit Re-masking Performance', 'shelter_edit_ms', 'cloak_edit_ms', 'camouflage_edit_ms', 'pure_lua_edit_ms');
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

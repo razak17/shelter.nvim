@@ -467,6 +467,8 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 **Choose camouflage.nvim** for multi-format support (JSON, YAML, TOML, etc.) with password breach checking.
 
+The benchmarks also include a **Pure Lua** baseline — simple Lua pattern matching with extmarks and full buffer parsing on every change. This represents the best you can achieve without a dedicated plugin, separate optimisations, or a native Rust binary.
+
 ## Architecture
 
 ```

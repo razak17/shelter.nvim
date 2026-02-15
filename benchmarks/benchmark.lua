@@ -1,4 +1,4 @@
--- Performance benchmark: shelter.nvim vs cloak.nvim vs camouflage.nvim
+-- Performance benchmark: shelter.nvim vs cloak.nvim vs camouflage.nvim vs Pure Lua
 -- Run with: nvim --headless -u benchmarks/minimal_init.lua -l benchmarks/benchmark.lua
 --
 -- Output: JSON file (benchmark_results.json) with timing results
@@ -7,6 +7,10 @@
 -- 1. Parsing: Raw parsing + mask generation (no buffer)
 -- 2. Preview: Masking a preview buffer (Telescope scenario)
 -- 3. Edit: Re-masking after text change (typing scenario)
+--
+-- "Pure Lua" baseline: simple Lua pattern matching + extmarks with full buffer
+-- parsing on every change. Represents the best you can achieve without a
+-- dedicated plugin, separate optimisations, or a native Rust binary.
 
 local ITERATIONS = 10000
 local SIZES = { 10, 50, 100, 500 }
@@ -131,6 +135,63 @@ local function benchmark_camouflage_parse(content, iterations)
 	return (total_time / iterations) / 1e6 -- Convert ns to ms
 end
 
+---Benchmark Pure Lua approach (pattern matching + extmark overlay)
+---This represents the DIY approach: Lua pattern matching + vim.api.nvim_buf_set_extmark
+---@param content string
+---@param iterations number
+---@return number Average time in milliseconds
+local function benchmark_pure_lua_parse(content, iterations)
+	-- Create a scratch buffer with env content
+	local bufnr = vim.api.nvim_create_buf(false, true)
+	local buf_lines = vim.split(content, "\n")
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, buf_lines)
+	vim.api.nvim_set_current_buf(bufnr)
+
+	local ns = vim.api.nvim_create_namespace("pure_lua_bench")
+	local pattern = "=()(.+)()"
+
+	-- Warmup run (not timed)
+	for lnum, line in ipairs(buf_lines) do
+		local from, match, to = string.find(line, pattern)
+		if from then
+			local mask = string.rep("*", vim.fn.strchars(match))
+			vim.api.nvim_buf_set_extmark(bufnr, ns, lnum - 1, from - 1, {
+				virt_text = { { mask, "Comment" } },
+				virt_text_pos = "overlay",
+				end_col = to - 1,
+				priority = 200,
+			})
+		end
+	end
+	vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+	-- Timed runs
+	local total_time = 0
+	for _ = 1, iterations do
+		vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+		local start = hrtime()
+		for lnum, line in ipairs(buf_lines) do
+			local from, match, to = string.find(line, pattern)
+			if from then
+				local mask = string.rep("*", vim.fn.strchars(match))
+				vim.api.nvim_buf_set_extmark(bufnr, ns, lnum - 1, from - 1, {
+					virt_text = { { mask, "Comment" } },
+					virt_text_pos = "overlay",
+					end_col = to - 1,
+					priority = 200,
+				})
+			end
+		end
+		local elapsed = hrtime() - start
+		total_time = total_time + elapsed
+	end
+
+	-- Cleanup
+	vim.api.nvim_buf_delete(bufnr, { force = true })
+
+	return (total_time / iterations) / 1e6 -- Convert ns to ms
+end
+
 --------------------------------------------------------------------------------
 -- PREVIEW BENCHMARKS (Telescope preview scenario)
 --------------------------------------------------------------------------------
@@ -180,6 +241,14 @@ end
 local function benchmark_camouflage_preview(content, iterations)
 	-- camouflage.nvim uses the same mechanism for preview
 	return benchmark_camouflage_parse(content, iterations)
+end
+
+---Benchmark Pure Lua preview (same as parse, no separate preview concept)
+---@param content string
+---@param iterations number
+---@return number Average time in milliseconds
+local function benchmark_pure_lua_preview(content, iterations)
+	return benchmark_pure_lua_parse(content, iterations)
 end
 
 --------------------------------------------------------------------------------
@@ -302,6 +371,64 @@ local function benchmark_camouflage_edit(content, iterations)
 	return (total_time / iterations) / 1e6
 end
 
+---Benchmark Pure Lua re-masking after edit (full buffer re-scan)
+---@param content string
+---@param iterations number
+---@return number Average time in milliseconds
+local function benchmark_pure_lua_edit(content, iterations)
+	-- Create buffer
+	local bufnr = vim.api.nvim_create_buf(false, true)
+	local buf_lines = vim.split(content, "\n")
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, buf_lines)
+	vim.api.nvim_set_current_buf(bufnr)
+
+	local ns = vim.api.nvim_create_namespace("pure_lua_bench_edit")
+	local pattern = "=()(.+)()"
+
+	-- Initial mask
+	for lnum, line in ipairs(buf_lines) do
+		local from, match, to = string.find(line, pattern)
+		if from then
+			local mask = string.rep("*", vim.fn.strchars(match))
+			vim.api.nvim_buf_set_extmark(bufnr, ns, lnum - 1, from - 1, {
+				virt_text = { { mask, "Comment" } },
+				virt_text_pos = "overlay",
+				end_col = to - 1,
+				priority = 200,
+			})
+		end
+	end
+
+	local total_time = 0
+	for i = 1, iterations do
+		-- Simulate edit
+		local new_line = "MODIFIED_" .. i .. "=new_secret_value_xxxxx"
+		buf_lines[1] = new_line
+		vim.api.nvim_buf_set_lines(bufnr, 0, 1, false, { new_line })
+
+		-- Pure Lua re-processes entire buffer on change (no incremental path)
+		vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+		local start = hrtime()
+		for lnum, line in ipairs(buf_lines) do
+			local from, match, to = string.find(line, pattern)
+			if from then
+				local mask = string.rep("*", vim.fn.strchars(match))
+				vim.api.nvim_buf_set_extmark(bufnr, ns, lnum - 1, from - 1, {
+					virt_text = { { mask, "Comment" } },
+					virt_text_pos = "overlay",
+					end_col = to - 1,
+					priority = 200,
+				})
+			end
+		end
+		local elapsed = hrtime() - start
+		total_time = total_time + elapsed
+	end
+
+	vim.api.nvim_buf_delete(bufnr, { force = true })
+	return (total_time / iterations) / 1e6
+end
+
 --------------------------------------------------------------------------------
 -- MAIN RUNNER
 --------------------------------------------------------------------------------
@@ -333,40 +460,32 @@ local function run_benchmarks()
 		local shelter_parse = benchmark_shelter_parse(content, ITERATIONS)
 		local cloak_parse = benchmark_cloak_parse(content, ITERATIONS)
 		local camouflage_parse = benchmark_camouflage_parse(content, ITERATIONS)
-		print(
-			string.format(
-				"  Parse:   shelter=%.3fms, cloak=%s, camouflage=%s",
-				shelter_parse,
-				cloak_parse and string.format("%.3fms", cloak_parse) or "N/A",
-				camouflage_parse and string.format("%.3fms", camouflage_parse) or "N/A"
-			)
-		)
+		local pure_lua_parse = benchmark_pure_lua_parse(content, ITERATIONS)
+		local fmt_ms = function(v) return v and string.format("%.3fms", v) or "N/A" end
+		print(string.format(
+			"  Parse:   shelter=%.3fms, cloak=%s, camouflage=%s, pure_lua=%s",
+			shelter_parse, fmt_ms(cloak_parse), fmt_ms(camouflage_parse), fmt_ms(pure_lua_parse)
+		))
 
 		-- Preview benchmarks
 		local shelter_preview = benchmark_shelter_preview(content, ITERATIONS)
 		local cloak_preview = benchmark_cloak_preview(content, ITERATIONS)
 		local camouflage_preview = benchmark_camouflage_preview(content, ITERATIONS)
-		print(
-			string.format(
-				"  Preview: shelter=%.3fms, cloak=%s, camouflage=%s",
-				shelter_preview,
-				cloak_preview and string.format("%.3fms", cloak_preview) or "N/A",
-				camouflage_preview and string.format("%.3fms", camouflage_preview) or "N/A"
-			)
-		)
+		local pure_lua_preview = benchmark_pure_lua_preview(content, ITERATIONS)
+		print(string.format(
+			"  Preview: shelter=%.3fms, cloak=%s, camouflage=%s, pure_lua=%s",
+			shelter_preview, fmt_ms(cloak_preview), fmt_ms(camouflage_preview), fmt_ms(pure_lua_preview)
+		))
 
 		-- Edit benchmarks
 		local shelter_edit = benchmark_shelter_edit(content, ITERATIONS)
 		local cloak_edit = benchmark_cloak_edit(content, ITERATIONS)
 		local camouflage_edit = benchmark_camouflage_edit(content, ITERATIONS)
-		print(
-			string.format(
-				"  Edit:    shelter=%.3fms, cloak=%s, camouflage=%s",
-				shelter_edit,
-				cloak_edit and string.format("%.3fms", cloak_edit) or "N/A",
-				camouflage_edit and string.format("%.3fms", camouflage_edit) or "N/A"
-			)
-		)
+		local pure_lua_edit = benchmark_pure_lua_edit(content, ITERATIONS)
+		print(string.format(
+			"  Edit:    shelter=%.3fms, cloak=%s, camouflage=%s, pure_lua=%s",
+			shelter_edit, fmt_ms(cloak_edit), fmt_ms(camouflage_edit), fmt_ms(pure_lua_edit)
+		))
 
 		results.benchmarks[tostring(size)] = {
 			lines = size,
@@ -374,14 +493,17 @@ local function run_benchmarks()
 			shelter_parse_ms = round3(shelter_parse),
 			cloak_parse_ms = cloak_parse and round3(cloak_parse) or nil,
 			camouflage_parse_ms = camouflage_parse and round3(camouflage_parse) or nil,
+			pure_lua_parse_ms = pure_lua_parse and round3(pure_lua_parse) or nil,
 			-- Preview (Telescope/FZF)
 			shelter_preview_ms = round3(shelter_preview),
 			cloak_preview_ms = cloak_preview and round3(cloak_preview) or nil,
 			camouflage_preview_ms = camouflage_preview and round3(camouflage_preview) or nil,
+			pure_lua_preview_ms = pure_lua_preview and round3(pure_lua_preview) or nil,
 			-- Edit (re-masking)
 			shelter_edit_ms = round3(shelter_edit),
 			cloak_edit_ms = cloak_edit and round3(cloak_edit) or nil,
 			camouflage_edit_ms = camouflage_edit and round3(camouflage_edit) or nil,
+			pure_lua_edit_ms = pure_lua_edit and round3(pure_lua_edit) or nil,
 		}
 	end
 
