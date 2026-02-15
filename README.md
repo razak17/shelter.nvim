@@ -459,6 +459,8 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 - **Zero Debounce** — Instant updates with `nvim_buf_attach`
 - **Pre-computed Offsets** — O(1) byte-to-line conversion
 
+The benchmarks also include a **Pure Lua** baseline — simple Lua pattern matching with extmarks and full buffer parsing on every change. This represents the best you can physically achieve without a dedicated plugin or separate optimisations. Even this minimal approach is slower than shelter.nvim at scale because it still has to iterate every line in Lua and call into the Neovim API per match. Any future plugin that aims to match shelter.nvim's performance would need to move beyond pure Lua — either via a native binary, SIMD-accelerated parsing, or similarly complex incremental update strategies.
+
 ### When to Choose
 
 **Choose shelter.nvim** for dotenv files with maximum performance and features.
@@ -466,8 +468,6 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 **Choose cloak.nvim** for any filetype with minimal setup.
 
 **Choose camouflage.nvim** for multi-format support (JSON, YAML, TOML, etc.) with password breach checking.
-
-The benchmarks also include a **Pure Lua** baseline — simple Lua pattern matching with extmarks and full buffer parsing on every change. This represents the best you can achieve without a dedicated plugin, separate optimisations, or a native Rust binary.
 
 ## Architecture
 
