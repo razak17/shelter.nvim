@@ -90,7 +90,12 @@ end
 ---@param find_value_range fun(bufnr: number, line_num: number): number|nil, number|nil
 function M.toggle_peek(bufnr, line_num, refresh_callback, find_value_range)
 	-- If currently peeking and cursor is within the active range, hide
-	if peek_range and peek_range.bufnr == bufnr and line_num >= peek_range.start_line and line_num <= peek_range.end_line then
+	if
+		peek_range
+		and peek_range.bufnr == bufnr
+		and line_num >= peek_range.start_line
+		and line_num <= peek_range.end_line
+	then
 		hide_peek(bufnr, refresh_callback)
 	else
 		M.peek_line(bufnr, line_num, refresh_callback, find_value_range)
