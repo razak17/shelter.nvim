@@ -400,7 +400,7 @@ function M.mask_value(value, opts)
 	return string.rep(mask_char, output_len)
 end
 
----Peek at current line (temporarily reveal for 3 seconds)
+---Peek at current line (reveal value while cursor is on it)
 function M.peek()
 	local buffer = require("shelter.integrations.buffer")
 	buffer.peek_line()

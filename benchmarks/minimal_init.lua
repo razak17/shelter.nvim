@@ -19,6 +19,20 @@ for _, cloak_path in ipairs(cloak_paths) do
   end
 end
 
+-- Add camouflage.nvim to runtimepath (cloned by CI to /tmp/camouflage.nvim)
+local camouflage_paths = {
+  "/tmp/camouflage.nvim",
+  vim.fn.expand("~/.local/share/nvim/lazy/camouflage.nvim"),
+  vim.fn.expand("~/.local/share/nvim/site/pack/vendor/start/camouflage.nvim"),
+}
+
+for _, camo_path in ipairs(camouflage_paths) do
+  if vim.fn.isdirectory(camo_path) == 1 then
+    vim.opt.runtimepath:prepend(camo_path)
+    break
+  end
+end
+
 -- Initialize shelter.nvim with default config
 require("shelter").setup({
   skip_comments = true,
@@ -41,3 +55,15 @@ if cloak_ok then
     },
   })
 end
+
+-- Initialize camouflage.nvim with matching config
+local camo_ok, camouflage = pcall(require, "camouflage")
+if camo_ok then
+  camouflage.setup({
+    enabled = true,
+    style = "stars",
+    mask_char = "*",
+  })
+end
+
+-- No setup needed for Pure Lua benchmark — it uses raw Lua pattern matching + extmarks directly

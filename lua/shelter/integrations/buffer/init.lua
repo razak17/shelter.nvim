@@ -313,10 +313,38 @@ function M.toggle_buffer(bufnr)
 end
 
 -- ============================================================================
--- Peek Functions (Temporary line reveal)
+-- Peek Functions (Cursor-based line reveal)
 -- ============================================================================
 
----Peek a line temporarily (reveal for 3 seconds)
+---Find the value line range for a given line from the mask cache
+---@param bufnr number Buffer number
+---@param line_num number Line number (1-indexed)
+---@return number|nil start_line
+---@return number|nil end_line
+local function find_value_range(bufnr, line_num)
+	local cache = get_buffer_cache(bufnr)
+	if not cache or not cache.masks then
+		return nil, nil
+	end
+	for _, mask_info in ipairs(cache.masks) do
+		if line_num >= mask_info.line_number and line_num <= mask_info.value_end_line then
+			return mask_info.line_number, mask_info.value_end_line
+		end
+	end
+	return nil, nil
+end
+
+---Synchronously re-mask a buffer for peek transitions (no flash).
+---Unlike refresh_buffer, this skips unshelter (which clears extmarks async)
+---and instead invalidates caches then re-applies masks synchronously.
+---@param bufnr number
+local function remask_buffer_sync(bufnr)
+	buffer_content_hashes[bufnr] = nil
+	invalidate_buffer_cache(bufnr)
+	M.shelter_buffer(bufnr, true)
+end
+
+---Peek a line (reveal value while cursor is on it)
 ---@param bufnr? number Buffer number (default: current)
 ---@param line_num? number Line number (default: current cursor line)
 function M.peek_line(bufnr, line_num)
@@ -324,19 +352,8 @@ function M.peek_line(bufnr, line_num)
 	line_num = line_num or api.nvim_win_get_cursor(0)[1]
 
 	peek.peek_line(bufnr, line_num, function()
-		M.refresh_buffer(bufnr)
-	end)
-end
-
----Hide a peeked line
----@param bufnr? number Buffer number (default: current)
----@param line_num number Line number to hide
-function M.hide_line(bufnr, line_num)
-	bufnr = bufnr or nvim_get_current_buf()
-
-	peek.hide_line(bufnr, line_num, function()
-		M.refresh_buffer(bufnr)
-	end)
+		remask_buffer_sync(bufnr)
+	end, find_value_range)
 end
 
 ---Toggle peek for current line
@@ -347,8 +364,8 @@ function M.toggle_peek(bufnr, line_num)
 	line_num = line_num or api.nvim_win_get_cursor(0)[1]
 
 	peek.toggle_peek(bufnr, line_num, function()
-		M.refresh_buffer(bufnr)
-	end)
+		remask_buffer_sync(bufnr)
+	end, find_value_range)
 end
 
 -- ============================================================================

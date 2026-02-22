@@ -8,10 +8,11 @@
 
 Protect sensitive values in your environment files with intelligent, blazingly fast masking.
 
-[Installation](#installation) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Modes](#modes) • [API](#api) • [vs cloak.nvim](#comparison-with-cloaknvim)
+[Installation](#installation) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Modules](#modules) • [Modes](#modes) • [ecolog Integration](#ecolog-integration) • [API](#api) • [vs cloak.nvim](#comparison-with-cloaknvim)
 
 ## Why shelter.nvim?
 
+- **Secure** — Never leak API keys in meetings, screen shares, or pair programming sessions
 - **Fast** — Rust-native parsing, 3-12x faster than alternatives
 - **Instant** — Zero debounce, masks update as you type
 - **Smart** — Only re-processes changed lines, not the entire buffer
@@ -50,10 +51,10 @@ use {
 ## Quick Start
 
 ```lua
--- Minimal setup
+-- Minimal setup - masks all .env files in buffers
 require("shelter").setup({})
 
--- With Telescope integration
+-- With picker integration (Telescope, FZF, Snacks)
 require("shelter").setup({
   modules = {
     files = true,
@@ -65,6 +66,14 @@ require("shelter").setup({
 require("shelter").setup({
   default_mode = "partial",
 })
+
+-- With ecolog.nvim integration
+require("shelter").setup({
+  modules = {
+    files = true,
+    ecolog = true,  -- Mask LSP completions and hover
+  },
+})
 ```
 
 ## Commands
@@ -74,37 +83,131 @@ require("shelter").setup({
 | `:Shelter toggle [module]`  | Toggle masking on/off           |
 | `:Shelter enable [module]`  | Enable masking                  |
 | `:Shelter disable [module]` | Disable masking                 |
-| `:Shelter peek`             | Reveal current line temporarily |
+| `:Shelter peek`             | Reveal value while cursor is on it |
 | `:Shelter info`             | Show status and modes           |
 | `:Shelter build`            | Rebuild native library          |
 
-**Modules:** `files`, `telescope_previewer`, `fzf_previewer`, `snacks_previewer`
-
 ## Configuration
+
+### Full Configuration Reference
 
 ```lua
 require("shelter").setup({
   -- Appearance
-  mask_char = "*",
-  highlight_group = "Comment",
+  mask_char = "*",              -- Character used for masking
+  highlight_group = "Comment",  -- Highlight group for masked text
 
   -- Behavior
-  skip_comments = true,
-  default_mode = "full",  -- "full", "partial", "none", or custom
-  env_filetypes = { "dotenv", "sh", "conf" },
+  skip_comments = true,         -- Don't mask commented lines
+  default_mode = "full",        -- "full", "partial", "none", or custom
+  env_filetypes = { "dotenv", "sh", "conf" },  -- Filetypes to mask
 
-  -- Module toggles
+  -- Module toggles (see Modules section for details)
   modules = {
-    files = {
-      shelter_on_leave = true,
-      disable_cmp = true,
-    },
+    files = true,               -- Buffer masking
     telescope_previewer = false,
     fzf_previewer = false,
     snacks_previewer = false,
+    ecolog = false,             -- ecolog.nvim integration
+  },
+
+  -- Pattern-based mode selection
+  patterns = {
+    ["*_KEY"] = "full",         -- Full mask for API keys
+    ["*_PUBLIC*"] = "none",     -- Don't mask public values
+    ["DEBUG"] = "none",         -- Don't mask debug flags
+  },
+
+  -- Source file-based mode selection
+  sources = {
+    [".env.local"] = "none",       -- Don't mask local dev file
+    [".env.production"] = "full",  -- Full mask for production
+  },
+
+  -- Mode configuration (see Modes section)
+  modes = {
+    full = { preserve_length = true },
+    partial = { show_start = 3, show_end = 3 },
   },
 })
 ```
+
+## Modules
+
+Modules control which contexts shelter.nvim masks values in.
+
+### files
+
+Buffer masking for `.env` files opened in Neovim.
+
+```lua
+modules = {
+  files = true,  -- Simple enable
+
+  -- Or with options:
+  files = {
+    shelter_on_leave = true,  -- Re-mask when leaving buffer (default: true)
+    disable_cmp = true,       -- Disable completion in .env files (default: true)
+  },
+}
+```
+
+**Features:**
+- Instant masking as you type
+- Line-specific updates (only changed lines re-masked)
+- Peek functionality to reveal current value while cursor stays on it
+- Optional completion disable to prevent plugins from exposing values
+
+### telescope_previewer
+
+Mask values in Telescope file previews.
+
+```lua
+modules = {
+  telescope_previewer = true,
+}
+```
+
+When enabled, `.env` files shown in Telescope's preview window will have their values masked.
+
+### fzf_previewer
+
+Mask values in fzf-lua file previews.
+
+```lua
+modules = {
+  fzf_previewer = true,
+}
+```
+
+### snacks_previewer
+
+Mask values in Snacks.nvim file previews.
+
+```lua
+modules = {
+  snacks_previewer = true,
+}
+```
+
+### ecolog
+
+Integration with [ecolog.nvim](https://github.com/ph1losof/ecolog.nvim) for LSP-based environment variable management.
+
+```lua
+modules = {
+  ecolog = true,  -- Enable all contexts
+
+  -- Or with fine-grained control:
+  ecolog = {
+    cmp = true,     -- Mask completion item values (default: true)
+    peek = true,    -- Mask hover/peek content (default: true)
+    picker = true,  -- Mask variable picker entries (default: true)
+  },
+}
+```
+
+See [ecolog Integration](#ecolog-integration) for detailed setup.
 
 ## Modes
 
@@ -129,7 +232,7 @@ modes = {
     show_start = 3,
     show_end = 3,
     min_mask = 3,
-    fallback_mode = "full",
+    fallback_mode = "full",  -- Use full mode for short values
   },
 }
 ```
@@ -208,6 +311,75 @@ sources = {
 
 **Priority:** Key pattern → Source pattern → Default mode
 
+## ecolog Integration
+
+shelter.nvim provides deep integration with [ecolog.nvim](https://github.com/ph1losof/ecolog.nvim), an LSP-powered environment variable manager.
+
+### Why Use Both?
+
+- **ecolog.nvim** provides LSP features: completion, hover, go-to-definition, diagnostics
+- **shelter.nvim** ensures values are never exposed, even in LSP responses
+
+Without shelter.nvim, when you trigger completion or hover in ecolog, the actual values are visible. With the integration enabled, values are masked everywhere while still being functional.
+
+### Setup
+
+Install both plugins:
+
+```lua
+-- lazy.nvim
+{
+  "ph1losof/ecolog.nvim",
+  config = function()
+    require("ecolog").setup({
+      lsp = { backend = "auto" },
+    })
+  end,
+},
+{
+  "ph1losof/shelter.nvim",
+  config = function()
+    require("shelter").setup({
+      modules = {
+        files = true,           -- Buffer masking
+        telescope_previewer = true,
+        ecolog = {
+          cmp = true,           -- Mask completion values
+          peek = true,          -- Mask hover content
+          picker = true,        -- Mask picker entries
+        },
+      },
+    })
+  end,
+},
+```
+
+### How It Works
+
+shelter.nvim intercepts ecolog-lsp responses at the LSP client level:
+
+1. **Completion** (`cmp`): When you type `process.env.`, completion items show masked values
+2. **Hover** (`peek`): When you hover over a variable, the value is masked
+3. **Picker** (`picker`): The variable browser shows masked values
+
+**Copying/Peeking Values:** Even with masking enabled, you can still copy the real value using ecolog's copy commands. shelter.nvim hooks into ecolog's `on_variable_peek` hook to provide the unmasked value when explicitly requested.
+
+### Runtime Control
+
+Toggle ecolog contexts independently:
+
+```lua
+local shelter = require("shelter")
+
+-- Toggle all ecolog contexts
+shelter.toggle("ecolog")
+
+-- Toggle specific contexts
+shelter.integrations.ecolog.toggle("cmp")
+shelter.integrations.ecolog.toggle("peek")
+shelter.integrations.ecolog.toggle("picker")
+```
+
 ## API
 
 ```lua
@@ -220,28 +392,31 @@ local shelter = require("shelter")
 | `shelter.is_enabled(module)`       | Check if module is enabled      |
 | `shelter.toggle(module)`           | Toggle module on/off            |
 | `shelter.get_config()`             | Get current configuration       |
-| `shelter.peek()`                   | Reveal current line temporarily |
+| `shelter.peek()`                   | Reveal value while cursor is on it |
 | `shelter.info()`                   | Show plugin status              |
 | `shelter.build()`                  | Rebuild native library          |
 | `shelter.register_mode(name, def)` | Register custom mode            |
 | `shelter.mask_value(value, opts)`  | Mask a value directly           |
 
-## Comparison with cloak.nvim
+## Comparison with cloak.nvim and camouflage.nvim
 
 ### Feature Comparison
 
-| Feature                | shelter.nvim                   | cloak.nvim                   |
-| ---------------------- | ------------------------------ | ---------------------------- |
-| **Performance**        | ✅ 3-12x faster (Rust-native)  | 🟡 Pure Lua                  |
-| **Re-masking**         | ✅ Line-specific (incremental) | 🟡 Full buffer re-parse      |
-| **Partial masking**    | ✅ Built-in mode               | 🟡 Manual pattern workaround |
-| **Multi-line values**  | ✅ Full support                | ❌ Not supported             |
-| **Quote handling**     | ✅ EDF compliant               | 🟡 Pattern-dependent         |
-| **Preview support**    | ✅ Telescope, FZF, Snacks      | 🟡 Telescope only            |
-| **Completion disable** | ✅ nvim-cmp + blink-cmp        | 🟡 nvim-cmp only             |
-| **Custom modes**       | ✅ Factory pattern             | 🟡 Lua patterns              |
-| **Build step**         | 🟡 Requires Rust               | ✅ None                      |
-| **File types**         | 🟡 Env files only              | ✅ Any filetype              |
+| Feature                | shelter.nvim                   | cloak.nvim                   | camouflage.nvim              |
+| ---------------------- | ------------------------------ | ---------------------------- | ---------------------------- |
+| **Performance**        | 3-12x faster (Rust-native)     | Pure Lua                     | Pure Lua + TreeSitter        |
+| **Re-masking**         | Line-specific (incremental)    | Full buffer re-parse         | Full buffer re-parse         |
+| **Partial masking**    | Built-in mode                  | Manual pattern workaround    | Multiple styles (stars, dotted, scramble) |
+| **Multi-line values**  | Full support                   | Not supported                | Supported                    |
+| **Quote handling**     | EDF compliant                  | Pattern-dependent            | Basic                        |
+| **Preview support**    | Telescope, FZF, Snacks         | Telescope only               | Telescope, Snacks            |
+| **Completion disable** | nvim-cmp + blink-cmp           | nvim-cmp only                | nvim-cmp                     |
+| **Custom modes**       | Factory pattern                | Lua patterns                 | Custom parsers               |
+| **LSP integration**    | ecolog-plugin                  | None                         | None                         |
+| **Build step**         | Requires Rust                  | None                         | None                         |
+| **File types**         | Env files only                 | Any filetype                 | 13+ formats (env, json, yaml, toml, etc.) |
+| **Leak-free masking**  | Yes — zero-gap architecture    | [No — flashes values on open/paste](https://github.com/laytan/cloak.nvim/issues/25) | Debounce-based (may flash)   |
+| **Security features**  | N/A                            | N/A                          | Have I Been Pwned checking   |
 
 <!-- BENCHMARK_START -->
 ### Performance Benchmarks
@@ -250,32 +425,32 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 #### Parsing Performance
 
-| Lines | shelter.nvim | cloak.nvim | Difference |
-|-------|--------------|------------|------------|
-| 10    | 0.01 ms      | 0.04 ms      | 4.0x faster |
-| 50    | 0.06 ms      | 0.19 ms      | 3.0x faster |
-| 100    | 0.11 ms      | 0.35 ms      | 3.1x faster |
-| 500    | 0.48 ms      | 1.75 ms      | 3.6x faster |
+| Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
+|-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
+| 10    | 0.01 ms      | 0.05 ms      | 0.08 ms      | 0.02 ms      | 3.9x faster | 6.9x faster | 1.5x faster |
+| 50    | 0.06 ms      | 0.21 ms      | 0.36 ms      | 0.11 ms      | 3.3x faster | 5.7x faster | 1.7x faster |
+| 100    | 0.12 ms      | 0.40 ms      | 0.70 ms      | 0.21 ms      | 3.4x faster | 6.0x faster | 1.8x faster |
+| 500    | 0.48 ms      | 1.91 ms      | 3.39 ms      | 1.07 ms      | 4.0x faster | 7.1x faster | 2.2x faster |
 
 #### Preview Performance (Telescope)
 
-| Lines | shelter.nvim | cloak.nvim | Difference |
-|-------|--------------|------------|------------|
-| 10    | 0.01 ms      | 0.04 ms      | 4.5x faster |
-| 50    | 0.03 ms      | 0.18 ms      | 6.6x faster |
-| 100    | 0.04 ms      | 0.37 ms      | 8.2x faster |
-| 500    | 0.22 ms      | 1.82 ms      | 8.4x faster |
+| Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
+|-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
+| 10    | 0.01 ms      | 0.05 ms      | 0.09 ms      | 0.02 ms      | 6.5x faster | 10.7x faster | 2.5x faster |
+| 50    | 0.03 ms      | 0.22 ms      | 0.35 ms      | 0.09 ms      | 8.5x faster | 13.5x faster | 3.6x faster |
+| 100    | 0.04 ms      | 0.41 ms      | 0.73 ms      | 0.19 ms      | 9.6x faster | 17.3x faster | 4.5x faster |
+| 500    | 0.23 ms      | 1.96 ms      | 3.38 ms      | 1.03 ms      | 8.4x faster | 14.4x faster | 4.4x faster |
 
 #### Edit Re-masking Performance
 
-| Lines | shelter.nvim | cloak.nvim | Difference |
-|-------|--------------|------------|------------|
-| 10    | 0.02 ms      | 0.05 ms      | 2.7x faster |
-| 50    | 0.04 ms      | 0.19 ms      | 4.7x faster |
-| 100    | 0.07 ms      | 0.35 ms      | 5.3x faster |
-| 500    | 0.35 ms      | 1.71 ms      | 4.9x faster |
+| Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
+|-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
+| 10    | 0.02 ms      | 0.06 ms      | 0.09 ms      | 0.02 ms      | 3.3x faster | 5.5x faster | 1.3x faster |
+| 50    | 0.04 ms      | 0.20 ms      | 0.39 ms      | 0.10 ms      | 5.4x faster | 10.5x faster | 2.7x faster |
+| 100    | 0.06 ms      | 0.41 ms      | 0.71 ms      | 0.25 ms      | 6.7x faster | 11.5x faster | 4.0x faster |
+| 500    | 0.36 ms      | 1.82 ms      | 3.47 ms      | 1.24 ms      | 5.1x faster | 9.8x faster | 3.5x faster |
 
-*Last updated: 2026-01-14*
+*Last updated: 2026-02-15*
 <!-- BENCHMARK_END -->
 
 ### Why So Fast?
@@ -285,11 +460,27 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 - **Zero Debounce** — Instant updates with `nvim_buf_attach`
 - **Pre-computed Offsets** — O(1) byte-to-line conversion
 
+### Why Leak-Free?
+
+Unlike cloak.nvim and camouflage.nvim, shelter.nvim is architecturally designed to never expose sensitive values — not even for a single frame. cloak.nvim has an [open issue](https://github.com/laytan/cloak.nvim/issues/25) where values are briefly flashed on file open and when pasting in insert mode. This happens because it relies on event-driven re-cloaking with inherent timing gaps.
+
+shelter.nvim avoids this entirely:
+
+- **Synchronous `nvim_buf_attach`** — Masks are applied in the `on_lines` callback before Neovim renders the next frame, so changed lines are never displayed unmasked
+- **Pre-populated cache** — Initial buffer load parses and masks content before the buffer is displayed
+- **No debounce** — Re-masking is instant and synchronous, not deferred via timers or `vim.schedule`
+
+This means shelter.nvim is safe for screen sharing, recordings, and any scenario where even a brief flash of a secret is unacceptable.
+
+The benchmarks also include a **Pure Lua** baseline — simple Lua pattern matching with extmarks and full buffer parsing on every change. This represents the best you can physically achieve without a dedicated plugin or separate optimisations. Even this minimal approach is slower than shelter.nvim at scale because it still has to iterate every line in Lua and call into the Neovim API per match. Any future plugin that aims to match shelter.nvim's performance would need to move beyond pure Lua — either via a native binary, SIMD-accelerated parsing, or similarly complex incremental update strategies.
+
 ### When to Choose
 
 **Choose shelter.nvim** for dotenv files with maximum performance and features.
 
-**Choose cloak.nvim** for any filetype with minimal setup
+**Choose cloak.nvim** for any filetype with minimal setup.
+
+**Choose camouflage.nvim** for multi-format support (JSON, YAML, TOML, etc.) with password breach checking.
 
 ## Architecture
 
@@ -312,6 +503,12 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 - **Mode Factory** — Creates and manages masking mode instances
 - **Extmarks** — Applies masks via Neovim's extmark API
 - **nvim_buf_attach** — Tracks line changes for instant re-masking
+
+## Related Projects
+
+- **[ecolog.nvim](https://github.com/ph1losof/ecolog.nvim)** — LSP-powered environment variable management
+- **[ecolog-lsp](https://github.com/ph1losof/ecolog-lsp)** — The Language Server providing env var analysis
+- **[korni](https://github.com/ph1losof/korni)** — Zero-copy `.env` file parser (used internally)
 
 ## License
 
