@@ -17,6 +17,7 @@ local M = {}
 ---@field telescope_previewer boolean Telescope preview masking
 ---@field fzf_previewer boolean FZF preview masking
 ---@field snacks_previewer boolean Snacks preview masking
+---@field oil_previewer boolean Oil.nvim preview masking
 ---@field ecolog? boolean|ShelterEcologModuleConfig Ecolog integration (boolean or detailed config)
 
 ---@class ShelterBufferConfig
@@ -69,6 +70,7 @@ local DEFAULT_CONFIG = {
 		telescope_previewer = false,
 		fzf_previewer = false,
 		snacks_previewer = false,
+		oil_previewer = false,
 	},
 	buffer = {
 		shelter_on_leave = true, -- Deprecated, use modules.files.shelter_on_leave
