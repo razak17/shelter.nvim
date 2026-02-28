@@ -226,17 +226,18 @@ function M.generate_masks(content, source)
 			-- Call mode:apply directly (skip modes.apply overhead)
 			local mask = mode:apply(context)
 
-			-- Direct indexed assignment (faster than #masks + 1)
-			mask_count = mask_count + 1
-			masks[mask_count] = {
-				line_number = entry.line_number,
-				value_end_line = entry.value_end_line,
-				mask = mask,
-				value_start = entry.value_start,
-				value_end = entry.value_end,
-				quote_type = entry.quote_type,
-				value = entry.value, -- Keep for tests/diagnostics (string ref, no copy)
-			}
+			if mask ~= entry.value then
+				mask_count = mask_count + 1
+				masks[mask_count] = {
+					line_number = entry.line_number,
+					value_end_line = entry.value_end_line,
+					mask = mask,
+					value_start = entry.value_start,
+					value_end = entry.value_end,
+					quote_type = entry.quote_type,
+					value = entry.value,
+				}
+			end
 		end
 	end
 
@@ -309,16 +310,20 @@ function M.generate_masks_incremental(content, source, line_range, cached_masks)
 
 			local mask = mode:apply(context)
 
-			new_mask_count = new_mask_count + 1
-			new_masks[new_mask_count] = {
-				line_number = entry.line_number,
-				value_end_line = entry.value_end_line,
-				mask = mask,
-				value_start = entry.value_start,
-				value_end = entry.value_end,
-				quote_type = entry.quote_type,
-				value = entry.value, -- Keep for tests/diagnostics (string ref, no copy)
-			}
+			-- Skip entries where mask is identical to original value (e.g., "none" mode)
+			-- Avoids overlaying unchanged text with highlight group
+			if mask ~= entry.value then
+				new_mask_count = new_mask_count + 1
+				new_masks[new_mask_count] = {
+					line_number = entry.line_number,
+					value_end_line = entry.value_end_line,
+					mask = mask,
+					value_start = entry.value_start,
+					value_end = entry.value_end,
+					quote_type = entry.quote_type,
+					value = entry.value, -- Keep for tests/diagnostics (string ref, no copy)
+				}
+			end
 		end
 	end
 

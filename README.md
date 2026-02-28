@@ -100,7 +100,7 @@ require("shelter").setup({
   -- Behavior
   skip_comments = true,         -- Don't mask commented lines
   default_mode = "full",        -- "full", "partial", "none", or custom
-  env_filetypes = { "dotenv", "sh", "conf" },  -- Filetypes to mask
+  env_filetypes = { "dotenv", "edf", "sh", "conf" },  -- Filetypes to mask
 
   -- Module toggles (see Modules section for details)
   modules = {
@@ -108,6 +108,7 @@ require("shelter").setup({
     telescope_previewer = false,
     fzf_previewer = false,
     snacks_previewer = false,
+    oil_previewer = false,
     ecolog = false,             -- ecolog.nvim integration
   },
 
@@ -131,6 +132,42 @@ require("shelter").setup({
   },
 })
 ```
+
+### A note on filetypes
+
+Neovim's default filetype detection doesn't assign `dotenv` to `.env` files out of
+the box; variants like `.env.local` or `.env.production` can also be inconsistent
+or detected correctly only after the file is opened.
+
+This matters because we rely on Neovim's filetype detection, so if a file you'd
+like to shelter is not explicitly mapped to a filetype, shelter.nvim may not be active
+at all or may not work correctly in previews.
+
+Custom mappings can be added using the `vim.filetype.add` API. For example, you
+can create a file in your Neovim runtime path (usually `~/.config/nvim/filetype.lua`)
+and add the following:
+
+```lua
+vim.filetype.add({
+  -- Mappings based on file extension
+  extension = {
+    env = "dotenv",
+  },
+  -- Mappings based on FULL filename
+  filename = {
+    [".env"] = "dotenv",
+    ["env"] = "dotenv",
+  },
+  -- Mappings based on filename pattern match
+  pattern = {
+    -- Match filenames like ".env.development", "env.local" and so on
+    [".?env.*"] = "dotenv",
+  },
+})
+```
+
+This can be done with any filetype you want, but don't forget to add them to the
+`env_filetypes` configuration option as well!
 
 ## Modules
 
@@ -187,6 +224,16 @@ Mask values in Snacks.nvim file previews.
 ```lua
 modules = {
   snacks_previewer = true,
+}
+```
+
+### oil_previewer
+
+Mask values in oil.nvim file previews.
+
+```lua
+modules = {
+  oil_previewer = true,
 }
 ```
 
@@ -427,30 +474,30 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 | Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
 |-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
-| 10    | 0.01 ms      | 0.05 ms      | 0.08 ms      | 0.02 ms      | 3.9x faster | 6.9x faster | 1.5x faster |
-| 50    | 0.06 ms      | 0.21 ms      | 0.36 ms      | 0.11 ms      | 3.3x faster | 5.7x faster | 1.7x faster |
-| 100    | 0.12 ms      | 0.40 ms      | 0.70 ms      | 0.21 ms      | 3.4x faster | 6.0x faster | 1.8x faster |
-| 500    | 0.48 ms      | 1.91 ms      | 3.39 ms      | 1.07 ms      | 4.0x faster | 7.1x faster | 2.2x faster |
+| 10    | 0.01 ms      | 0.04 ms      | 0.08 ms      | 0.02 ms      | 3.7x faster | 6.8x faster | 1.6x faster |
+| 50    | 0.06 ms      | 0.19 ms      | 0.37 ms      | 0.11 ms      | 3.0x faster | 5.9x faster | 1.7x faster |
+| 100    | 0.12 ms      | 0.38 ms      | 0.72 ms      | 0.21 ms      | 3.2x faster | 6.1x faster | 1.8x faster |
+| 500    | 0.47 ms      | 1.78 ms      | 3.41 ms      | 1.10 ms      | 3.8x faster | 7.2x faster | 2.3x faster |
 
 #### Preview Performance (Telescope)
 
 | Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
 |-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
-| 10    | 0.01 ms      | 0.05 ms      | 0.09 ms      | 0.02 ms      | 6.5x faster | 10.7x faster | 2.5x faster |
-| 50    | 0.03 ms      | 0.22 ms      | 0.35 ms      | 0.09 ms      | 8.5x faster | 13.5x faster | 3.6x faster |
-| 100    | 0.04 ms      | 0.41 ms      | 0.73 ms      | 0.19 ms      | 9.6x faster | 17.3x faster | 4.5x faster |
-| 500    | 0.23 ms      | 1.96 ms      | 3.38 ms      | 1.03 ms      | 8.4x faster | 14.4x faster | 4.4x faster |
+| 10    | 0.01 ms      | 0.04 ms      | 0.09 ms      | 0.02 ms      | 5.0x faster | 9.6x faster | 2.3x faster |
+| 50    | 0.03 ms      | 0.18 ms      | 0.36 ms      | 0.11 ms      | 5.6x faster | 10.9x faster | 3.2x faster |
+| 100    | 0.04 ms      | 0.39 ms      | 0.69 ms      | 0.23 ms      | 9.0x faster | 16.1x faster | 5.4x faster |
+| 500    | 0.18 ms      | 1.85 ms      | 3.46 ms      | 0.97 ms      | 10.3x faster | 19.2x faster | 5.4x faster |
 
 #### Edit Re-masking Performance
 
 | Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
 |-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
-| 10    | 0.02 ms      | 0.06 ms      | 0.09 ms      | 0.02 ms      | 3.3x faster | 5.5x faster | 1.3x faster |
-| 50    | 0.04 ms      | 0.20 ms      | 0.39 ms      | 0.10 ms      | 5.4x faster | 10.5x faster | 2.7x faster |
-| 100    | 0.06 ms      | 0.41 ms      | 0.71 ms      | 0.25 ms      | 6.7x faster | 11.5x faster | 4.0x faster |
-| 500    | 0.36 ms      | 1.82 ms      | 3.47 ms      | 1.24 ms      | 5.1x faster | 9.8x faster | 3.5x faster |
+| 10    | 0.02 ms      | 0.05 ms      | 0.09 ms      | 0.02 ms      | 2.7x faster | 5.2x faster | 1.3x faster |
+| 50    | 0.04 ms      | 0.19 ms      | 0.38 ms      | 0.11 ms      | 5.5x faster | 10.9x faster | 3.1x faster |
+| 100    | 0.06 ms      | 0.35 ms      | 0.72 ms      | 0.26 ms      | 6.2x faster | 12.6x faster | 4.6x faster |
+| 500    | 0.34 ms      | 1.74 ms      | 3.52 ms      | 1.25 ms      | 5.1x faster | 10.4x faster | 3.7x faster |
 
-*Last updated: 2026-02-15*
+*Last updated: 2026-02-24*
 <!-- BENCHMARK_END -->
 
 ### Why So Fast?
@@ -503,11 +550,13 @@ The benchmarks also include a **Pure Lua** baseline — simple Lua pattern match
 - **Mode Factory** — Creates and manages masking mode instances
 - **Extmarks** — Applies masks via Neovim's extmark API
 - **nvim_buf_attach** — Tracks line changes for instant re-masking
+- **EDF** — File format specification that korni uses to parse `.env` files
 
 ## Related Projects
 
 - **[ecolog.nvim](https://github.com/ph1losof/ecolog.nvim)** — LSP-powered environment variable management
 - **[ecolog-lsp](https://github.com/ph1losof/ecolog-lsp)** — The Language Server providing env var analysis
+- **[ecolog-spec](https://github.com/ph1losof/ecolog-spec)** — EDF Specification
 - **[korni](https://github.com/ph1losof/korni)** — Zero-copy `.env` file parser (used internally)
 
 ## License

@@ -56,6 +56,15 @@ function M.setup_all(modules)
 		end
 	end
 
+	-- Oil.nvim previewer
+	if modules.oil_previewer then
+		local ok, oil = pcall(require, "shelter.integrations.oil")
+		if ok then
+			oil.setup()
+			M.register("oil", oil)
+		end
+	end
+
 	-- Ecolog integration (for ecolog-plugin LSP masking)
 	if modules.ecolog then
 		local ok, ecolog = pcall(require, "shelter.integrations.ecolog")
