@@ -474,30 +474,30 @@ Measured on GitHub Actions (Ubuntu, averaged over 10000 iterations):
 
 | Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
 |-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
-| 10    | 0.01 ms      | 0.04 ms      | 0.08 ms      | 0.02 ms      | 3.7x faster | 6.8x faster | 1.6x faster |
-| 50    | 0.06 ms      | 0.19 ms      | 0.37 ms      | 0.11 ms      | 3.0x faster | 5.9x faster | 1.7x faster |
-| 100    | 0.12 ms      | 0.38 ms      | 0.72 ms      | 0.21 ms      | 3.2x faster | 6.1x faster | 1.8x faster |
-| 500    | 0.47 ms      | 1.78 ms      | 3.41 ms      | 1.10 ms      | 3.8x faster | 7.2x faster | 2.3x faster |
+| 10    | 0.01 ms      | 0.04 ms      | 0.08 ms      | 0.02 ms      | 3.9x faster | 7.6x faster | 1.7x faster |
+| 50    | 0.06 ms      | 0.18 ms      | 0.37 ms      | 0.11 ms      | 3.1x faster | 6.1x faster | 1.8x faster |
+| 100    | 0.12 ms      | 0.35 ms      | 0.72 ms      | 0.22 ms      | 3.1x faster | 6.2x faster | 1.9x faster |
+| 500    | 0.50 ms      | 1.75 ms      | 3.50 ms      | 1.09 ms      | 3.5x faster | 7.0x faster | 2.2x faster |
 
 #### Preview Performance (Telescope)
 
 | Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
 |-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
-| 10    | 0.01 ms      | 0.04 ms      | 0.09 ms      | 0.02 ms      | 5.0x faster | 9.6x faster | 2.3x faster |
-| 50    | 0.03 ms      | 0.18 ms      | 0.36 ms      | 0.11 ms      | 5.6x faster | 10.9x faster | 3.2x faster |
-| 100    | 0.04 ms      | 0.39 ms      | 0.69 ms      | 0.23 ms      | 9.0x faster | 16.1x faster | 5.4x faster |
-| 500    | 0.18 ms      | 1.85 ms      | 3.46 ms      | 0.97 ms      | 10.3x faster | 19.2x faster | 5.4x faster |
+| 10    | 0.01 ms      | 0.05 ms      | 0.09 ms      | 0.02 ms      | 6.6x faster | 12.3x faster | 3.0x faster |
+| 50    | 0.03 ms      | 0.20 ms      | 0.36 ms      | 0.10 ms      | 7.5x faster | 14.0x faster | 3.9x faster |
+| 100    | 0.05 ms      | 0.37 ms      | 0.72 ms      | 0.22 ms      | 8.1x faster | 15.7x faster | 4.8x faster |
+| 500    | 0.20 ms      | 1.79 ms      | 3.51 ms      | 1.12 ms      | 9.1x faster | 17.8x faster | 5.7x faster |
 
 #### Edit Re-masking Performance
 
 | Lines | shelter.nvim | cloak.nvim | camouflage.nvim | Pure Lua | vs cloak | vs camouflage | vs Pure Lua |
 |-------|--------------|------------|-----------------|-----------------|----------|---------------|---------|
 | 10    | 0.02 ms      | 0.05 ms      | 0.09 ms      | 0.02 ms      | 2.7x faster | 5.2x faster | 1.3x faster |
-| 50    | 0.04 ms      | 0.19 ms      | 0.38 ms      | 0.11 ms      | 5.5x faster | 10.9x faster | 3.1x faster |
-| 100    | 0.06 ms      | 0.35 ms      | 0.72 ms      | 0.26 ms      | 6.2x faster | 12.6x faster | 4.6x faster |
-| 500    | 0.34 ms      | 1.74 ms      | 3.52 ms      | 1.25 ms      | 5.1x faster | 10.4x faster | 3.7x faster |
+| 50    | 0.03 ms      | 0.19 ms      | 0.38 ms      | 0.12 ms      | 5.6x faster | 11.1x faster | 3.6x faster |
+| 100    | 0.06 ms      | 0.38 ms      | 0.75 ms      | 0.20 ms      | 6.8x faster | 13.7x faster | 3.6x faster |
+| 500    | 0.33 ms      | 1.70 ms      | 3.51 ms      | 1.19 ms      | 5.2x faster | 10.6x faster | 3.6x faster |
 
-*Last updated: 2026-02-24*
+*Last updated: 2026-03-28*
 <!-- BENCHMARK_END -->
 
 ### Why So Fast?
