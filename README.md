@@ -8,7 +8,7 @@
 
 Protect sensitive values in your environment files with intelligent, blazingly fast masking.
 
-[Installation](#installation) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Modules](#modules) • [Modes](#modes) • [ecolog Integration](#ecolog-integration) • [API](#api) • [vs cloak.nvim](#comparison-with-cloaknvim)
+[Installation](#installation) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Modules](#modules) • [Modes](#modes) • [ecolog Integration](#ecolog-integration) • [API](#api) • [vs cloak.nvim](#comparison-with-cloaknvim-and-camouflagenvim)
 
 ## Why shelter.nvim?
 
