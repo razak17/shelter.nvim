@@ -54,6 +54,7 @@ describe("shelter.integrations.buffer", function()
   end)
 
   after_each(function()
+    buffer.cleanup()
     if test_bufnr then
       cleanup_buffer(test_bufnr)
       test_bufnr = nil
@@ -325,6 +326,24 @@ REAL=value]]
         -- The mask should not extend past the value
         assert.is_true(end_col <= 10, "Mask should not extend into inline comment")
       end
+    end)
+  end)
+
+  describe("wrap option", function()
+    it("disables wrap on enter and restores it on leave", function()
+      test_bufnr = create_test_buffer("SECRET=mysecret", "test.env")
+      local winid = vim.api.nvim_get_current_win()
+
+      vim.api.nvim_win_set_buf(winid, test_bufnr)
+      vim.api.nvim_win_set_option(winid, "wrap", true)
+
+      buffer.setup()
+
+      vim.api.nvim_exec_autocmds("BufEnter", { buffer = test_bufnr, modeline = false })
+      assert.is_false(vim.api.nvim_win_get_option(winid, "wrap"), "wrap should be disabled in env buffer")
+
+      vim.api.nvim_exec_autocmds("BufLeave", { buffer = test_bufnr, modeline = false })
+      assert.is_true(vim.api.nvim_win_get_option(winid, "wrap"), "wrap should be restored after leaving env buffer")
     end)
   end)
 end)
