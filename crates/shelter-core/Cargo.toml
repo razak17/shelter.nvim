@@ -10,7 +10,7 @@ repository = "https://github.com/philosofonusus/shelter.nvim"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-korni = "0.1.4"
+korni = "0.1.5"
 
 [build-dependencies]
 cbindgen = "0.27"
