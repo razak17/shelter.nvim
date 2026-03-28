@@ -22,6 +22,7 @@ local nvim_buf_get_lines = api.nvim_buf_get_lines
 local nvim_buf_get_name = api.nvim_buf_get_name
 local nvim_get_current_buf = api.nvim_get_current_buf
 local nvim_get_current_win = api.nvim_get_current_win
+local nvim_win_is_valid = api.nvim_win_is_valid
 local table_concat = table.concat
 
 -- Content hash tracking to skip redundant re-masks
@@ -35,6 +36,9 @@ local buffer_mask_cache = {}
 
 -- Flag to force full re-mask after paste (cleared after one use)
 local needs_full_remask = {}
+
+-- Window-local wrap state backup (winid -> original wrap value)
+local window_wrap_state = {}
 
 ---Mark buffer as needing full re-mask on next edit (called after paste)
 ---@param bufnr number
@@ -77,6 +81,46 @@ end
 local math_min = math.min
 local math_max = math.max
 
+---Disable wrap for a window, preserving previous setting
+---@param winid number
+local function disable_wrap(winid)
+	if not nvim_win_is_valid(winid) then
+		return
+	end
+
+	if window_wrap_state[winid] == nil then
+		local ok, current_wrap = pcall(api.nvim_win_get_option, winid, "wrap")
+		if ok then
+			window_wrap_state[winid] = current_wrap
+		end
+	end
+
+	pcall(api.nvim_win_set_option, winid, "wrap", false)
+end
+
+---Restore wrap for a window if shelter changed it
+---@param winid number
+local function restore_wrap(winid)
+	if not nvim_win_is_valid(winid) then
+		window_wrap_state[winid] = nil
+		return
+	end
+
+	local original_wrap = window_wrap_state[winid]
+	if original_wrap ~= nil then
+		pcall(api.nvim_win_set_option, winid, "wrap", original_wrap)
+		window_wrap_state[winid] = nil
+	end
+end
+
+---Restore wrap for all windows currently showing a buffer
+---@param bufnr number
+local function restore_wrap_for_buffer(bufnr)
+	for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
+		restore_wrap(winid)
+	end
+end
+
 ---Setup buffer options for sheltering
 ---@param bufnr number
 ---@param winid number
@@ -84,6 +128,8 @@ local function setup_buffer_options(bufnr, winid)
 	-- Set conceal options for proper masking display
 	api.nvim_win_set_option(winid, "conceallevel", 2)
 	api.nvim_win_set_option(winid, "concealcursor", "nvic")
+	-- Keep masked values on one screen line
+	disable_wrap(winid)
 
 	-- Disable completion if configured
 	completion.disable(bufnr)
@@ -279,6 +325,8 @@ function M.unshelter_buffer(bufnr)
 	local winid = nvim_get_current_win()
 	pcall(api.nvim_win_set_option, winid, "conceallevel", 0)
 	pcall(api.nvim_win_set_option, winid, "concealcursor", "")
+	restore_wrap_for_buffer(bufnr)
+	restore_wrap(winid)
 
 	extmarks.clear(bufnr)
 	completion.restore(bufnr)
@@ -419,6 +467,7 @@ function M.setup()
 			if not env_file.is_env_buffer(ev.buf) then
 				return
 			end
+			restore_wrap(nvim_get_current_win())
 			local files_config = config.get_files_config()
 			if files_config.shelter_on_leave then
 				state.reset_revealed_lines()
@@ -446,6 +495,9 @@ end
 
 ---Cleanup buffer integration
 function M.cleanup()
+	for winid, _ in pairs(window_wrap_state) do
+		restore_wrap(winid)
+	end
 	autocmds.cleanup()
 	peek.cleanup()
 	paste.cleanup()
