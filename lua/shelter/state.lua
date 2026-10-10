@@ -128,18 +128,15 @@ function M.set_enabled(feature, enabled)
 				return
 			end
 
-			if enabled then
+			if M.is_enabled("files") then
 				-- If enabling files, clear revealed lines and refresh
 				M.reset_revealed_lines()
 				local ok, engine = pcall(require, "shelter.masking.engine")
 				if ok and engine.clear_caches then
 					engine.clear_caches()
 				end
-				buffer.shelter_buffer()
-			else
-				-- If disabling files, clear all extmarks
-				buffer.unshelter_buffer()
 			end
+			buffer.refresh_all_buffers()
 		end)
 	end
 end

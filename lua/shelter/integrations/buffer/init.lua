@@ -113,14 +113,6 @@ local function restore_wrap(winid)
 	end
 end
 
----Restore wrap for all windows currently showing a buffer
----@param bufnr number
-local function restore_wrap_for_buffer(bufnr)
-	for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
-		restore_wrap(winid)
-	end
-end
-
 ---Setup buffer options for sheltering
 ---@param bufnr number
 ---@param winid number
@@ -321,12 +313,12 @@ end
 function M.unshelter_buffer(bufnr)
 	bufnr = bufnr or nvim_get_current_buf()
 
-	-- Reset conceal options
-	local winid = nvim_get_current_win()
-	pcall(api.nvim_win_set_option, winid, "conceallevel", 0)
-	pcall(api.nvim_win_set_option, winid, "concealcursor", "")
-	restore_wrap_for_buffer(bufnr)
-	restore_wrap(winid)
+	-- Reset options only in windows showing this buffer.
+	for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
+		pcall(api.nvim_win_set_option, winid, "conceallevel", 0)
+		pcall(api.nvim_win_set_option, winid, "concealcursor", "")
+		restore_wrap(winid)
+	end
 
 	extmarks.clear(bufnr)
 	completion.restore(bufnr)
@@ -344,20 +336,30 @@ function M.refresh_buffer(bufnr)
 	M.shelter_buffer(bufnr)
 end
 
----Toggle masking for a buffer
----@param bufnr? number Buffer number (default: current)
+---Refresh all loaded env buffers after a global files state change.
+function M.refresh_all_buffers()
+	for _, bufnr in ipairs(api.nvim_list_bufs()) do
+		if api.nvim_buf_is_loaded(bufnr) and env_file.is_env_buffer(bufnr) then
+			if state.is_enabled("files") then
+				for _, winid in ipairs(vim.fn.win_findbuf(bufnr)) do
+					setup_buffer_options(bufnr, winid)
+				end
+				attach_buffer(bufnr)
+				buffer_content_hashes[bufnr] = nil
+				invalidate_buffer_cache(bufnr)
+				M.shelter_buffer(bufnr, true)
+			else
+				M.unshelter_buffer(bufnr)
+			end
+		end
+	end
+end
+
+---Toggle the global files feature and refresh all eligible buffers.
+---@param bufnr? number Retained for compatibility; the files state is global.
 ---@return boolean new_state
 function M.toggle_buffer(bufnr)
-	bufnr = bufnr or nvim_get_current_buf()
-	local enabled = state.toggle("files")
-
-	if enabled then
-		M.shelter_buffer(bufnr)
-	else
-		M.unshelter_buffer(bufnr)
-	end
-
-	return enabled
+	return state.toggle("files")
 end
 
 -- ============================================================================

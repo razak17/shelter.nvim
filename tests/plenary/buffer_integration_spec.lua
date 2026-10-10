@@ -164,6 +164,90 @@ describe("shelter.integrations.buffer", function()
     end)
   end)
 
+  describe("global toggle across splits", function()
+    local buffers, windows
+
+    before_each(function()
+      buffers, windows = {}, {}
+      buffer.cleanup()
+      for i = 1, 3 do
+        buffers[i] = create_test_buffer("SECRET=value" .. i, "split" .. i .. ".env")
+      end
+      vim.api.nvim_set_current_buf(buffers[1])
+      windows[1] = vim.api.nvim_get_current_win()
+      vim.cmd("vsplit")
+      windows[2] = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_buf(windows[2], buffers[2])
+      for _, win in ipairs(windows) do
+        vim.wo[win].wrap = true
+      end
+      for _, buf in ipairs(buffers) do
+        buffer.shelter_buffer(buf, true)
+      end
+    end)
+
+    after_each(function()
+      wait_for_schedule()
+      buffer.cleanup()
+      vim.cmd("only!")
+      for _, buf in ipairs(buffers) do
+        cleanup_buffer(buf)
+      end
+    end)
+
+    local function assert_masked(enabled)
+      local ns = vim.api.nvim_create_namespace("shelter_mask")
+      for _, buf in ipairs(buffers) do
+        local marks = vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, {})
+        assert.equals(enabled, #marks > 0, "mask state for buffer " .. buf)
+      end
+      for _, win in ipairs(windows) do
+        assert.equals(enabled and 2 or 0, vim.wo[win].conceallevel)
+        assert.equals(enabled and "nvic" or "", vim.wo[win].concealcursor)
+        assert.equals(not enabled, vim.wo[win].wrap)
+      end
+    end
+
+    it("toggles visible and hidden buffers from either split", function()
+      for i = 1, 4 do
+        vim.api.nvim_set_current_win(windows[(i - 1) % 2 + 1])
+        require("shelter")._handle_toggle(nil)
+        wait_for_schedule()
+        assert_masked(i % 2 == 0)
+      end
+    end)
+
+    it("updates every window showing the same buffer", function()
+      vim.api.nvim_win_set_buf(windows[2], buffers[1])
+      state.set_enabled("files", false)
+      wait_for_schedule()
+      assert_masked(false)
+      state.set_enabled("files", true)
+      wait_for_schedule()
+      assert_masked(true)
+    end)
+
+    it("leaves unrelated window options alone", function()
+      local plain = create_test_buffer("plain text", "plain.txt", "text")
+      buffers[#buffers + 1] = plain
+      vim.cmd("vsplit")
+      local win = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_buf(win, plain)
+      vim.wo[win].conceallevel = 1
+      vim.wo[win].concealcursor = "n"
+      vim.wo[win].wrap = true
+      state.set_enabled("files", false)
+      wait_for_schedule()
+      state.set_enabled("files", true)
+      wait_for_schedule()
+      assert.equals(1, vim.wo[win].conceallevel)
+      assert.equals("n", vim.wo[win].concealcursor)
+      assert.is_true(vim.wo[win].wrap)
+      local ns = vim.api.nvim_create_namespace("shelter_mask")
+      assert.equals(0, #vim.api.nvim_buf_get_extmarks(plain, ns, 0, -1, {}))
+    end)
+  end)
+
   describe("multi-line value handling", function()
     it("masks multi-line values correctly", function()
       local content = [[JSON="{
